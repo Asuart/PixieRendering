@@ -20,7 +20,7 @@
 //
 //
 //MainWindowVulkan::MainWindowVulkan(const std::string& name, glm::ivec2 resolution) :
-//	MainWindow(name, resolution) {
+//	MainWindow(name, resolution, RenderAPI::Vulkan) {
 //	InitSDL();
 //
 //	m_vkAppInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

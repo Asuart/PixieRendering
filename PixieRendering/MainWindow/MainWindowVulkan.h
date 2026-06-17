@@ -5,7 +5,7 @@
 
 class MainWindowVulkan : public MainWindow {
 public:
-	MainWindowVulkan(const std::string& name, glm::ivec2 resolution) : MainWindow(name, resolution) {}
+	MainWindowVulkan(const std::string& name, glm::ivec2 resolution) : MainWindow(name, resolution, RenderAPI::Vulkan) {}
 	//~MainWindowVulkan();
 
 	VkInstance GetInstance() { return m_vkInstance; }

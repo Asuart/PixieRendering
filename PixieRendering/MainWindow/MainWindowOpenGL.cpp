@@ -5,7 +5,7 @@
 #include <GLFW/glfw3.h>
 
 MainWindowOpenGL::MainWindowOpenGL(const std::string& name, glm::ivec2 resolution) :
-	MainWindow(name, resolution) {
+	MainWindow(name, resolution, RenderAPI::OpenGL) {
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);

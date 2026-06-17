@@ -15,14 +15,18 @@ add_subdirectory(Dependencies)
 
 find_package(Vulkan REQUIRED)
 
-file(GLOB_RECURSE _source_list "PixieRendering/*.c" "PixieRendering/*.cpp" "PixieRendering/*.h" "PixieRendering/*.hpp")
+file(GLOB_RECURSE _source_list CONFIGURE_DEPENDS "PixieRendering/*.c" "PixieRendering/*.cpp" "PixieRendering/*.h" "PixieRendering/*.hpp")
 
 add_library(PixieRendering STATIC ${_source_list})
 
-target_compile_features(PixieRendering PUBLIC cxx_std_23)
+set_target_properties(PixieRendering PROPERTIES
+    CXX_STANDARD 23
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+)
 
-target_include_directories(PixieRendering PUBLIC "/")
-target_include_directories(PixieRendering PUBLIC "${glm_SOURCE_DIR}/")
+target_include_directories(PixieRendering PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(PixieRendering PUBLIC "${glm_SOURCE_DIR}")
 
 target_link_libraries(PixieRendering PRIVATE glad)
 target_link_libraries(PixieRendering PRIVATE glfw)
@@ -38,7 +42,7 @@ endif()
 
 foreach(_source IN ITEMS ${_source_list})
     get_filename_component(_source_path "${_source}" PATH)
-    string(REPLACE "${CMAKE_SOURCE_DIR}/PixieRendering" "" _group_path "${_source_path}")
+    string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/PixieRendering" "" _group_path "${_source_path}")
     string(REPLACE "../" "" _group_path "${_group_path}")
     source_group("${_group_path}" FILES "${_source}")
 endforeach()

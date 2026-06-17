@@ -4,9 +4,10 @@
 
 #include <GLFW/glfw3.h>
 
-MainWindow::MainWindow(const std::string& name, glm::ivec2 resolution) :
+MainWindow::MainWindow(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI) :
     m_name(name),
-    m_resolution(resolution) {
+    m_resolution(resolution),
+    m_renderAPI(renderAPI) {
     if (!glfwInit()) {
         std::cerr << "Failed to Initialize GLFW\n";
         exit(1);
@@ -23,6 +24,10 @@ glm::ivec2 MainWindow::GetResolution() const {
 
 bool MainWindow::GetShouldClose() const {
     return glfwWindowShouldClose(m_window);
+}
+
+RenderAPI MainWindow::GetRenderAPI() const {
+    return m_renderAPI;
 }
 
 void MainWindow::Close() {
