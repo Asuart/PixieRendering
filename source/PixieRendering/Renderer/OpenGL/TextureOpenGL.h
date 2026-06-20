@@ -27,7 +27,7 @@ constexpr GLint CastTextureFilteringOpenGL(TextureFiltering filtering) {
 }
 
 struct TextureOpenGL {
-	GLuint id;
-	GLint internalFormat;
-	glm::ivec2 resolution;
+	GLuint id = 0;
+	GLint internalFormat = GL_RED;
+	glm::ivec2 resolution = { 0, 0 };
 };

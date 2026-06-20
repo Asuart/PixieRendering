@@ -29,14 +29,10 @@ void RendererOpenGL::EndFrame() {
 	assert(m_viewportStates.size() == 0);
 }
 
-void RendererOpenGL::DrawMesh(MeshHandle meshHandle, ShaderHandle shaderHandle) {
-	const ShaderOpenGL& shaderEntry = GetShaderEntry(shaderHandle);
-	const MeshOpenGL& meshEntry = GetMeshEntry(meshHandle);
-	glUseProgram(shaderEntry.id);
-	glBindVertexArray(meshEntry.vertexArrayObject);
-	glDrawElements(GL_TRIANGLES, meshEntry.indicesCount, GL_UNSIGNED_INT, NULL);
-	glBindVertexArray(0);
-	glUseProgram(0);
+MeshHandle RendererOpenGL::CreateMesh() {
+	MeshOpenGL meshEntry;
+	m_meshes.push_back(meshEntry);
+	return MeshHandle(static_cast<int32_t>(m_meshes.size() - 1));
 }
 
 MeshHandle RendererOpenGL::LoadMesh(const Mesh* mesh) {
@@ -153,6 +149,16 @@ void RendererOpenGL::LoadMesh(MeshHandle& handle, const Mesh* mesh) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
+void RendererOpenGL::DrawMesh(MeshHandle meshHandle, ShaderHandle shaderHandle) {
+	const ShaderOpenGL& shaderEntry = GetShaderEntry(shaderHandle);
+	const MeshOpenGL& meshEntry = GetMeshEntry(meshHandle);
+	glUseProgram(shaderEntry.id);
+	glBindVertexArray(meshEntry.vertexArrayObject);
+	glDrawElements(GL_TRIANGLES, meshEntry.indicesCount, GL_UNSIGNED_INT, NULL);
+	glBindVertexArray(0);
+	glUseProgram(0);
+}
+
 FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::ivec2 resolution) {
 	m_frameBuffers.push_back(FrameBufferOpenGL(resolution));
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
@@ -228,10 +234,9 @@ TextureHandle RendererOpenGL::CreateTexture(glm::ivec2 resolution, TextureFormat
 	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 }
 
-TextureHandle RendererOpenGL::LoadTexture(float* data, glm::ivec2 resolution) {
+TextureHandle RendererOpenGL::LoadTexture(const Image2D* image) {
 	TextureOpenGL textureEntry;
-	textureEntry.internalFormat = GL_R32F;
-	textureEntry.resolution = resolution;
+	textureEntry.resolution = image->resolution;
 
 	glGenTextures(1, &textureEntry.id);
 	glBindTexture(GL_TEXTURE_2D, textureEntry.id);
@@ -239,83 +244,76 @@ TextureHandle RendererOpenGL::LoadTexture(float* data, glm::ivec2 resolution) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, resolution.x, resolution.y, 0, GL_RED, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
+
+	switch (image->format) {
+	case TextureFormat::Red8:
+		textureEntry.internalFormat = GL_RED;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RED, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::RGB8:
+		textureEntry.internalFormat = GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::RGBA8:
+		textureEntry.internalFormat = GL_RGBA;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::Red32f:
+		textureEntry.internalFormat = GL_R32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RED, GL_FLOAT, image->data.data());
+		break;
+	case TextureFormat::RGB32f:
+		textureEntry.internalFormat = GL_RGB32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGB, GL_FLOAT, image->data.data());
+		break;
+	case TextureFormat::RGBA32f:
+		textureEntry.internalFormat = GL_RGBA32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGBA, GL_FLOAT, image->data.data());
+		break;
+	default:
+		throw "RendererOpenGL::CreateTexture: unhandled texture type";
+	}
 
 	m_textures.push_back(textureEntry);
 
 	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 }
 
-TextureHandle RendererOpenGL::LoadTexture(glm::vec3* data, glm::ivec2 resolution) {
-	TextureOpenGL textureEntry;
-	textureEntry.internalFormat = GL_RGB32F;
-	textureEntry.resolution = resolution;
-
-	glGenTextures(1, &textureEntry.id);
-	glBindTexture(GL_TEXTURE_2D, textureEntry.id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, resolution.x, resolution.y, 0, GL_RGB, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	m_textures.push_back(textureEntry);
-
-	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
-}
-
-TextureHandle RendererOpenGL::LoadTexture(glm::vec4* data, glm::ivec2 resolution) {
-	TextureOpenGL textureEntry;
-	textureEntry.internalFormat = GL_RGBA32F;
-	textureEntry.resolution = resolution;
-
-	glGenTextures(1, &textureEntry.id);
-	glBindTexture(GL_TEXTURE_2D, textureEntry.id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, textureEntry.internalFormat, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	m_textures.push_back(textureEntry);
-
-	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
-}
-
-void RendererOpenGL::LoadTexture(TextureHandle handle, float* data, glm::ivec2 resolution) {
+void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 	TextureOpenGL& entry = GetTextureEntry(handle);
-	entry.internalFormat = GL_R32F;
-	entry.resolution = resolution;
+	entry.resolution = image->resolution;
 
-	glBindTexture(GL_TEXTURE_2D, entry.id);
-	glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, resolution.x, resolution.y, 0, GL_RED, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	switch (image->format) {
+	case TextureFormat::Red8:
+		entry.internalFormat = GL_RED;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RED, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::RGB8:
+		entry.internalFormat = GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGB, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::RGBA8:
+		entry.internalFormat = GL_RGBA;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->data.data());
+		break;
+	case TextureFormat::Red32f:
+		entry.internalFormat = GL_R32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RED, GL_FLOAT, image->data.data());
+		break;
+	case TextureFormat::RGB32f:
+		entry.internalFormat = GL_RGB32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGB, GL_FLOAT, image->data.data());
+		break;
+	case TextureFormat::RGBA32f:
+		entry.internalFormat = GL_RGBA32F;
+		glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, image->resolution.x, image->resolution.y, 0, GL_RGBA, GL_FLOAT, image->data.data());
+		break;
+	default:
+		throw "RendererOpenGL::CreateTexture: unhandled texture type";
+	}
 }
 
-void RendererOpenGL::LoadTexture(TextureHandle handle, glm::vec3* data, glm::ivec2 resolution) {
-	TextureOpenGL& entry = GetTextureEntry(handle);
-	entry.internalFormat = GL_RGB32F;
-	entry.resolution = resolution;
-
-	glBindTexture(GL_TEXTURE_2D, entry.id);
-	glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, resolution.x, resolution.y, 0, GL_RGB, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void RendererOpenGL::LoadTexture(TextureHandle handle, glm::vec4* data, glm::ivec2 resolution) {
-	TextureOpenGL& entry = GetTextureEntry(handle);
-	entry.internalFormat = GL_RGBA32F;
-	entry.resolution = resolution;
-
-	glBindTexture(GL_TEXTURE_2D, entry.id);
-	glTexImage2D(GL_TEXTURE_2D, 0, entry.internalFormat, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void RendererOpenGL::SetTextureFiltering(const TextureHandle handle, TextureFiltering minFilter, TextureFiltering magFilter) {
+void RendererOpenGL::SetTextureFiltering(TextureHandle handle, TextureFiltering minFilter, TextureFiltering magFilter) {
 	const TextureOpenGL& texture = GetTextureEntry(handle);
 	glBindTexture(GL_TEXTURE_2D, texture.id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, CastTextureFilteringOpenGL(minFilter));
@@ -323,7 +321,7 @@ void RendererOpenGL::SetTextureFiltering(const TextureHandle handle, TextureFilt
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void RendererOpenGL::SetTextureWrap(const TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT) {
+void RendererOpenGL::SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT) {
 	const TextureOpenGL& texture = GetTextureEntry(handle);
 	glBindTexture(GL_TEXTURE_2D, texture.id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, CastTextureWrapOpenGL(wrapS));
@@ -331,7 +329,7 @@ void RendererOpenGL::SetTextureWrap(const TextureHandle handle, TextureWrap wrap
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void RendererOpenGL::GenerateTextureMipmaps(const TextureHandle handle) {
+void RendererOpenGL::GenerateTextureMipmaps(TextureHandle handle) {
 	const TextureOpenGL& texture = GetTextureEntry(handle);
 	glBindTexture(GL_TEXTURE_2D, texture.id);
 	glGenerateMipmap(GL_TEXTURE_2D);

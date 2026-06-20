@@ -20,9 +20,10 @@ public:
 	void StartFrame();
 	void EndFrame();
 
-	void DrawMesh(MeshHandle meshHandle, ShaderHandle shaderHandle);
+	MeshHandle CreateMesh();
 	MeshHandle LoadMesh(const Mesh* mesh);
 	void LoadMesh(MeshHandle& handle, const Mesh* mesh);
+	void DrawMesh(MeshHandle meshHandle, ShaderHandle shaderHandle);
 
 	FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution);
 	void ResizeFrameBuffer(FrameBufferHandle& handle, glm::ivec2 resolution);
@@ -30,21 +31,15 @@ public:
 	void UnbindFrameBuffer();
 	void ClearFrameBuffer();
 
-	void ResizeViewport(glm::ivec2 resolution);
-
 	TextureHandle CreateTexture(glm::ivec2 resolution, TextureFormat format);
-	TextureHandle LoadTexture(float* data, glm::ivec2 resolution);
-	TextureHandle LoadTexture(glm::vec3* data, glm::ivec2 resolution);
-	TextureHandle LoadTexture(glm::vec4* data, glm::ivec2 resolution);
-	void LoadTexture(TextureHandle handle, float* data, glm::ivec2 resolution);
-	void LoadTexture(TextureHandle handle, glm::vec3* data, glm::ivec2 resolution);
-	void LoadTexture(TextureHandle handle, glm::vec4* data, glm::ivec2 resolution);
-	void SetTextureFiltering(const TextureHandle handle, TextureFiltering minFilter, TextureFiltering magFilter);
-	void SetTextureWrap(const TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT);
-	void GenerateTextureMipmaps(const TextureHandle handle);
+	TextureHandle LoadTexture(const Image2D* image);
+	void LoadTexture(TextureHandle& handle, const Image2D* image);
+	void SetTextureFiltering(TextureHandle handle, TextureFiltering minFilter, TextureFiltering magFilter);
+	void SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT);
+	void GenerateTextureMipmaps(TextureHandle handle);
+	glm::ivec2 GetTextureResolution(TextureHandle handle);
 	void BindTexture(ShaderHandle shaderHandle, const std::string& name, TextureHandle textureHandle, uint64_t index);
 	void BindTexture(ComputeShaderHandle computeShaderHandle, const std::string& name, TextureHandle textureHandle, uint64_t index);
-	glm::ivec2 GetTextureResolution(TextureHandle handle);
 
 	ShaderStorageBufferHandle LoadShaderStorageBuffer(uint8_t* data, uint32_t size);
 	void LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, uint8_t* data, uint32_t size);
@@ -60,6 +55,7 @@ public:
 	ComputeShaderHandle CreateComputeShader(const std::string& source);
 	void DispatchComputeShader(ComputeShaderHandle handle, int32_t x, int32_t y, int32_t z);
 
+	void ResizeViewport(glm::ivec2 resolution);
 	void MemoryBarriersAll();
 
 	uint64_t GetInternalID(TextureHandle handle);
