@@ -37,7 +37,6 @@ void RendererVulkan::InitVulkan() {
 	CreateColorResources();
 	CreateDepthResources();
 	CreateFramebuffers();
-	CreateDescriptorPool();
 	CreateCommandBuffers();
 	CreateSyncObjects();
 }

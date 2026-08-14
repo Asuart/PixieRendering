@@ -40,9 +40,9 @@ SpirVBinary CompileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shade
 	    .language = GLSLANG_SOURCE_GLSL,
 	    .stage = stage,
 	    .client = GLSLANG_CLIENT_VULKAN,
-	    .client_version = GLSLANG_TARGET_VULKAN_1_4,
+	    .client_version = GLSLANG_TARGET_VULKAN_1_0,
 	    .target_language = GLSLANG_TARGET_SPV,
-	    .target_language_version = GLSLANG_TARGET_SPV_1_5,
+	    .target_language_version = GLSLANG_TARGET_SPV_1_0,
 	    .code = shaderSource,
 	    .default_version = 100,
 	    .default_profile = GLSLANG_NO_PROFILE,
@@ -236,8 +236,10 @@ BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 	return result;
 }
 
-std::vector<ShaderBinding>
-MergeBindings(const std::vector<ShaderBinding>& a, const std::vector<ShaderBinding>& b) {
+std::vector<ShaderBinding> ShaderCompilerVulkan::MergeBindings(
+    const std::vector<ShaderBinding>& a,
+    const std::vector<ShaderBinding>& b
+) {
 	std::unordered_map<uint64_t, ShaderBinding> map;
 
 	auto add = [&](const ShaderBinding& src) {

@@ -3,9 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "UniformBufferVulkan.h"
 #include "ShaderCompilationVulkan.h"
-#include "RendererVulkan.h"
+#include "UniformBufferVulkan.h"
 
 namespace PixieRenderer {
 
@@ -21,8 +20,7 @@ struct MaterialVulkan {
 	std::vector<VkDescriptorSet> descriptorSets = {};
 	VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline pipeline = VK_NULL_HANDLE;
-	std::unordered_map<uint32_t, std::array<BufferResource, RendererVulkan::cMaxFramesInFlight>>
-	    uniformBuffers;
+	std::unordered_map<uint32_t, std::vector<BufferResource>> uniformBuffers;
 	BindingsInfo bindingsInfo;
 	VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 	std::unordered_map<std::string, uint32_t> nameToBinding;

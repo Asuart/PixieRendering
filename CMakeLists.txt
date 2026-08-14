@@ -15,4 +15,5 @@ add_subdirectory(dependencies)
 
 find_package(Vulkan REQUIRED)
 
+#add_subdirectory(dependencies/SPIRV-Cross)
 add_subdirectory(source)

@@ -8,13 +8,15 @@
 namespace PixieRenderer {
 
 struct ShaderBinding {
-	uint32_t binding;
-	uint32_t set;
-	VkDescriptorType type;
-	uint32_t count;
-	uint32_t stageFlags;
-	uint32_t blockSize;
-	std::string name;
+	uint32_t binding = UINT32_MAX;
+	uint32_t set = UINT32_MAX;
+	VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	uint32_t count = UINT32_MAX;
+	uint32_t stageFlags = UINT32_MAX;
+	uint32_t blockSize = UINT32_MAX;
+	std::string name = "";
+
+	ShaderBinding() = default;
 
 	ShaderBinding(
 	    uint32_t _binding,

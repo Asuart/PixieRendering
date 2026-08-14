@@ -18,7 +18,18 @@ target_link_libraries(PixieRendering PRIVATE glad)
 target_link_libraries(PixieRendering PRIVATE glslang)
 target_link_libraries(PixieRendering PRIVATE glslang-default-resource-limits)
 target_link_libraries(PixieRendering PRIVATE Vulkan::Vulkan)
-target_link_libraries(PixieRendering PRIVATE spirv-cross-core)
+
+if(MSVC)
+    target_link_libraries(PixieRendering PRIVATE 
+        debug "$ENV{VULKAN_SDK}/Lib/spirv-cross-cored.lib"
+        optimized "$ENV{VULKAN_SDK}/Lib/spirv-cross-core.lib"
+        
+        debug "$ENV{VULKAN_SDK}/Lib/spirv-cross-glsld.lib"
+        optimized "$ENV{VULKAN_SDK}/Lib/spirv-cross-glsl.lib"
+    )
+else()
+    target_link_libraries(PixieRendering PRIVATE spirv-cross-core spirv-cross-glsl)
+endif()
 
 #if (MSVC)
 #    target_compile_options(PixieRendering PRIVATE /W4 /WX)

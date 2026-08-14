@@ -43,7 +43,7 @@ class RendererVulkan : public IRenderer {
 	void UnbindFrameBuffer();
 
 	TextureHandle
-	CreateTexture(const uint8_t* data = nullptr, glm::ivec2 resolution, TextureFormat format);
+	CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format);
 	void DestroyTexture(TextureHandle handle);
 	void LoadTexture(
 	    TextureHandle handle,
@@ -92,6 +92,7 @@ class RendererVulkan : public IRenderer {
 
 	MaterialHandle CreateMaterial(const char* vertShaderCode, const char* fragShaderCode);
 	void DestroyMaterial(MaterialHandle material);
+
 	ComputeProgramHandle CreateComputeProgram(const char* source);
 	void DestroyComputeProgram(ComputeProgramHandle handle);
 	void DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z);

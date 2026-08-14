@@ -1030,7 +1030,7 @@ RendererVulkan::CreateMaterial(const char* vertShaderCode, const char* fragShade
 			uint32_t binding = b.binding;
 			uint32_t blockSize = b.blockSize;
 
-			std::array<BufferResource, cMaxFramesInFlight> buffers;
+			std::vector<BufferResource> buffers(cMaxFramesInFlight);
 			for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
 				BufferResource& res = buffers[frame];
 				CreateBuffer(

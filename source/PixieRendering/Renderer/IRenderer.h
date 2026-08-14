@@ -44,7 +44,7 @@ class IRenderer {
 	CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format) = 0;
 	virtual void DestroyTexture(TextureHandle handle) = 0;
 	virtual void LoadTexture(
-	    TextureHandle& handle,
+	    TextureHandle handle,
 	    const uint8_t* data,
 	    glm::ivec2 resolution,
 	    TextureFormat format
@@ -74,8 +74,7 @@ class IRenderer {
 	CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) = 0;
 	virtual void DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) = 0;
 	virtual void
-	LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, uint8_t* data, uint32_t size) = 0;
-	virtual void BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t index) = 0;
+	LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
 	virtual uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) = 0;
 	virtual std::vector<uint8_t> GetShaderStorageBufferData(
 	    ShaderStorageBufferHandle handle,
@@ -83,10 +82,15 @@ class IRenderer {
 	    uint32_t size
 	) = 0;
 
-	virtual UniformBufferHandle CreateUniformBuffer(uint8_t* data, uint32_t size) = 0;
+	virtual UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size) = 0;
 	virtual void DestroyUniformBuffer(UniformBufferHandle handle) = 0;
-	virtual void LoadUniformBuffer(UniformBufferHandle handle, uint8_t* data, uint32_t size) = 0;
-	virtual void BindUniformBuffer(UniformBufferHandle handle, uint32_t index) = 0;
+	virtual void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
+	virtual void LoadUniformBuffer(
+	    MaterialHandle handle,
+	    const std::string& name,
+	    const void* data,
+	    size_t size
+	) = 0;
 
 	virtual MaterialHandle
 	CreateMaterial(const char* vertexShaderSource, const char* fragmentShaderShource) = 0;

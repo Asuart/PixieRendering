@@ -8,7 +8,7 @@
 
 namespace PixieRenderer {
 
-Window* CreateMainWindow(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI) {
+Window* CreateWindow(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI) {
 	switch (renderAPI) {
 	case RenderAPI::OpenGL:
 		return new WindowOpenGL(name, resolution);
@@ -25,7 +25,7 @@ IRenderer* CreateRenderer(Window* window) {
 	}
 	switch (window->GetRenderAPI()) {
 	case RenderAPI::OpenGL:
-		return new RendererOpenGL(window);
+		//return new RendererOpenGL(window);
 	default:
 		return new RendererVulkan(window);
 	}
