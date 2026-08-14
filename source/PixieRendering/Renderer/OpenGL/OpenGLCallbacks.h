@@ -2,11 +2,22 @@
 #include <iostream>
 #include <glad/glad.h>
 
-inline void APIENTRY OpenglCallbackHandler(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {	
-	//silence warnings
+namespace PixieRenderer {
+
+inline void APIENTRY OpenglCallbackHandler(
+    GLenum source,
+    GLenum type,
+    GLuint id,
+    GLenum severity,
+    GLsizei length,
+    const GLchar* message,
+    const void* userParam
+) {
+	// silence warnings
 	(void)userParam;
-	
-	if (id == 131185 || id == 131218 || id == 131186) return;
+
+	if (id == 131185 || id == 131218 || id == 131186)
+		return;
 
 	std::cout << "---------------------opengl-callback-start------------\n";
 	std::cout << "source: " << source << "\n";
@@ -54,3 +65,5 @@ inline void APIENTRY OpenglCallbackHandler(GLenum source, GLenum type, GLuint id
 	}
 	std::cout << "\n---------------------opengl-callback-end--------------\n";
 }
+
+} // namespace PixieRenderer

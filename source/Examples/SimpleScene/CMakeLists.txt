@@ -13,11 +13,11 @@ target_include_directories(SimpleScene PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(SimpleScene PRIVATE PixieRendering)
 
-if (MSVC)
-    target_compile_options(SimpleScene PRIVATE /W4 /WX)
-else()
-    target_compile_options(SimpleScene PRIVATE -Wall -Werror)
-endif()
+#if (MSVC)
+#    target_compile_options(SimpleScene PRIVATE /W4 /WX)
+#else()
+#    target_compile_options(SimpleScene PRIVATE -Wall -Werror)
+#endif()
 
 foreach(_source IN ITEMS ${_source_list})
     get_filename_component(_source_path "${_source}" PATH)

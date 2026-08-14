@@ -4,7 +4,13 @@
 #include <iostream>
 #include <string>
 
-ShaderOpenGL CompileShaderOpenGL(const char* vertexShaderSource, const char* framgentShaderSource, const char* geometryShaderSource) {
+namespace PixieRenderer {
+
+ShaderOpenGL CompileShaderOpenGL(
+    const char* vertexShaderSource,
+    const char* framgentShaderSource,
+    const char* geometryShaderSource
+) {
 	GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
 
@@ -99,3 +105,5 @@ ComputeShaderOpenGL CompileComputeShaderOpenGL(const char* computeShaderSource) 
 
 	return ComputeShaderOpenGL(computeProgram);
 }
+
+} // namespace PixieRenderer

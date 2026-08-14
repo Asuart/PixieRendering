@@ -2,6 +2,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
+namespace PixieRenderer {
+
 struct FrameBufferOpenGL {
 	FrameBufferOpenGL(glm::ivec2 resolution);
 	~FrameBufferOpenGL();
@@ -16,9 +18,11 @@ struct FrameBufferOpenGL {
 	void Bind() const;
 	void Unbind() const;
 
-protected:
+  protected:
 	GLuint m_frameBuffer;
 	GLuint m_texture;
 	GLuint m_depth;
 	glm::ivec2 m_resolution;
 };
+
+} // namespace PixieRenderer

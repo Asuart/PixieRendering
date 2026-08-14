@@ -1,6 +1,8 @@
 #pragma once
 #include "glad/glad.h"
 
+namespace PixieRenderer {
+
 struct MeshOpenGL {
 	GLuint vertexArrayObject = 0;
 	GLuint positionsBuffer = 0;
@@ -11,3 +13,5 @@ struct MeshOpenGL {
 	GLuint indicesBuffer = 0;
 	GLuint indicesCount = 0;
 };
+
+} // namespace PixieRenderer

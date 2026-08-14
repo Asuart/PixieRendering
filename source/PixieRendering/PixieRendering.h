@@ -1,6 +1,10 @@
 #pragma once
-#include "Renderer/Renderer.h"
-#include "MainWindow/MainWindow.h"
+#include "Renderer/IRenderer.h"
+#include "Window/Window.h"
 
-MainWindow* CreateMainWindow(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI);
-Renderer* CreateRenderer(MainWindow* window);
+namespace PixieRenderer {
+
+Window* CreateWindow(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI);
+IRenderer* CreateRenderer(Window* window);
+
+} // namespace PixieRenderer

@@ -1,7 +1,8 @@
 #include "FrameBufferOpenGL.h"
 
-FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) :
-	m_resolution(resolution) {
+namespace PixieRenderer {
+
+FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) : m_resolution(resolution) {
 	glCreateFramebuffers(1, &m_frameBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
 
@@ -16,7 +17,17 @@ FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) :
 
 	glGenTextures(1, &m_depth);
 	glBindTexture(GL_TEXTURE_2D, m_depth);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, resolution.x, resolution.y, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	glTexImage2D(
+	    GL_TEXTURE_2D,
+	    0,
+	    GL_DEPTH24_STENCIL8,
+	    resolution.x,
+	    resolution.y,
+	    0,
+	    GL_DEPTH_STENCIL,
+	    GL_UNSIGNED_INT_24_8,
+	    NULL
+	);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_depth, 0);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -28,9 +39,9 @@ FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) :
 }
 
 FrameBufferOpenGL::~FrameBufferOpenGL() {
-	//glDeleteFramebuffers(1, &m_frameBuffer);
-	//glDeleteTextures(1, &m_texture);
-	//glDeleteTextures(1, &m_depth);
+	// glDeleteFramebuffers(1, &m_frameBuffer);
+	// glDeleteTextures(1, &m_texture);
+	// glDeleteTextures(1, &m_depth);
 }
 
 void FrameBufferOpenGL::Resize(glm::ivec2 resolution) {
@@ -41,7 +52,17 @@ void FrameBufferOpenGL::Resize(glm::ivec2 resolution) {
 	glBindTexture(GL_TEXTURE_2D, m_texture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, resolution.x, resolution.y, 0, GL_RGBA, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, m_depth);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, resolution.x, resolution.y, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	glTexImage2D(
+	    GL_TEXTURE_2D,
+	    0,
+	    GL_DEPTH24_STENCIL8,
+	    resolution.x,
+	    resolution.y,
+	    0,
+	    GL_DEPTH_STENCIL,
+	    GL_UNSIGNED_INT_24_8,
+	    NULL
+	);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -76,3 +97,5 @@ void FrameBufferOpenGL::Bind() const {
 void FrameBufferOpenGL::Unbind() const {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+} // namespace PixieRenderer

@@ -1,0 +1,13 @@
+IndentWidth: 4
+UseTab: ForIndentation
+TabWidth: 4
+AllowShortFunctionsOnASingleLine: None
+ColumnLimit: 100
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+BinPackArguments: false
+BinPackParameters: false
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false

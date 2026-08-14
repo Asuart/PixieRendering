@@ -7,3 +7,6 @@
 [submodule "dependencies/glslang"]
 	path = dependencies/glslang
 	url = https://github.com/KhronosGroup/glslang.git
+[submodule "dependencies/SPIRV-cross"]
+	path = dependencies/SPIRV-cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
