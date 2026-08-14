@@ -173,7 +173,7 @@ class RendererVulkan : public IRenderer {
 	std::vector<VkSemaphore> m_renderFinishedSemaphores = {};
 	std::vector<VkFence> m_inFlightFences = {};
 	uint32_t m_currentFrame = 0;
-	uint32_t m_nextImageIndex = UINT32_MAX;
+	uint32_t m_nextImageIndex = 0;
 
 	void InitVulkan();
 	void Cleanup();

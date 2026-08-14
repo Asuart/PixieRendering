@@ -63,6 +63,10 @@ int32_t main(void) {
 		glm::vec2(0.5f, 1.0f),
 		glm::vec2(1.0f, 0.0f),
 	};
+	mesh.m_indices = { 0, 1, 2 };
+
+	mesh.m_boneIDs = { 0 };
+	mesh.m_boneWeights = { 0 };
 
 	MeshHandle meshHandle = renderer->CreateMesh(&mesh);
 
