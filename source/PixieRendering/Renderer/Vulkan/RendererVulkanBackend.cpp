@@ -1,7 +1,7 @@
 #include "RendererVulkan.h"
 
-#include "DebugVulkan.h"
 #include "../../Window/WindowVulkan.h"
+#include "DebugVulkan.h"
 
 namespace PixieRenderer {
 
@@ -11,11 +11,15 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
-const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 RendererVulkan::RendererVulkan(Window* window) : IRenderer(window, RenderAPI::Vulkan) {
 	InitVulkan();
+	m_renderWidth = window->GetResolution().x;
+	m_renderHeight = window->GetResolution().y;
+	m_viewportStart = { 0, 0 };
+	m_viewportResolution = { static_cast<int>(m_renderWidth), static_cast<int>(m_renderHeight) };
 }
 
 void RendererVulkan::InitVulkan() {
@@ -294,7 +298,7 @@ void RendererVulkan::CreateLogicalDevice() {
 	QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice);
 
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
 
 	float queuePriority = 1.0f;
 	for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -316,13 +320,12 @@ void RendererVulkan::CreateLogicalDevice() {
 	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+	createInfo.enabledLayerCount = 0;
 
-	if (enableValidationLayers) {
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	} else {
-		createInfo.enabledLayerCount = 0;
-	}
+	/*if (enableValidationLayers) {
+	    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+	    createInfo.ppEnabledLayerNames = validationLayers.data();
+	}*/
 
 	if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
@@ -357,7 +360,7 @@ void RendererVulkan::CreateSwapChain() {
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 	QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice);
-	uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily};
+	uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
 
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -404,7 +407,7 @@ VkExtent2D RendererVulkan::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capa
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
-		VkExtent2D actualExtent = {m_renderWidth, m_renderHeight};
+		VkExtent2D actualExtent = { m_renderWidth, m_renderHeight };
 		actualExtent.width = std::clamp(
 		    actualExtent.width,
 		    capabilities.minImageExtent.width,
@@ -518,8 +521,9 @@ void RendererVulkan::CreateRenderPass() {
 	dependency.dstAccessMask =
 	    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	std::array<VkAttachmentDescription, 3> attachments =
-	    {colorAttachment, depthAttachment, colorAttachmentResolve};
+	std::array<VkAttachmentDescription, 3> attachments = { colorAttachment,
+		                                                   depthAttachment,
+		                                                   colorAttachmentResolve };
 	VkRenderPassCreateInfo renderPassInfo{};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
@@ -536,7 +540,7 @@ void RendererVulkan::CreateRenderPass() {
 
 VkFormat RendererVulkan::FindDepthFormat() {
 	return FindSupportedFormat(
-	    {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+	    { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
 	);
@@ -561,69 +565,41 @@ VkFormat RendererVulkan::FindSupportedFormat(
 	throw std::runtime_error("failed to find supported format!");
 }
 
-std::array<VkVertexInputBindingDescription, 5> RendererVulkan::GetMeshBindingDescriptions() {
-	std::array<VkVertexInputBindingDescription, 5> bindingDescriptions{};
-
-	// Binding 0: Positions
-	bindingDescriptions[0].binding = 0;
-	bindingDescriptions[0].stride = sizeof(glm::vec3);
-	bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// Binding 1: Normals
-	bindingDescriptions[1].binding = 1;
-	bindingDescriptions[1].stride = sizeof(glm::vec3);
-	bindingDescriptions[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// Binding 2: Texture Coords
-	bindingDescriptions[2].binding = 2;
-	bindingDescriptions[2].stride = sizeof(glm::vec2);
-	bindingDescriptions[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// Binding 3: BoneIDs
-	bindingDescriptions[3].binding = 3;
-	bindingDescriptions[3].stride = sizeof(int32_t) * Mesh::cBonesPerVertex;
-	bindingDescriptions[3].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	// Binding 4: BoneWeights
-	bindingDescriptions[4].binding = 4;
-	bindingDescriptions[4].stride = sizeof(float) * Mesh::cBonesPerVertex;
-	bindingDescriptions[4].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescriptions;
+std::vector<VkVertexInputBindingDescription> RendererVulkan::GetMeshBindingDescriptions() {
+	VkVertexInputBindingDescription bindingDescription{};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof(Vertex);
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	return { bindingDescription };
 }
 
-std::array<VkVertexInputAttributeDescription, 5> RendererVulkan::GetMeshAttributeDescriptions() {
-	std::array<VkVertexInputAttributeDescription, 5> attributeDescriptions{};
+std::vector < VkVertexInputAttributeDescription> RendererVulkan::GetMeshAttributeDescriptions() {
+	std::vector<VkVertexInputAttributeDescription> attributeDescriptions(5);
 
-	// Location 0: Positions from Binding 0
 	attributeDescriptions[0].binding = 0;
 	attributeDescriptions[0].location = 0;
 	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = 0;
+	attributeDescriptions[0].offset = offsetof(Vertex, position);
 
-	// Location 1: Normals from Binding 1
-	attributeDescriptions[1].binding = 1;
+	attributeDescriptions[1].binding = 0;
 	attributeDescriptions[1].location = 1;
 	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = 0;
+	attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
-	// Location 2: TexCoords from Binding 2
-	attributeDescriptions[2].binding = 2;
+	attributeDescriptions[2].binding = 0;
 	attributeDescriptions[2].location = 2;
 	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[2].offset = 0;
+	attributeDescriptions[2].offset = offsetof(Vertex, uv);
 
-	// Location 3: BoneIDs from Binding 3
-	attributeDescriptions[3].binding = 3;
+	attributeDescriptions[3].binding = 0;
 	attributeDescriptions[3].location = 3;
-	attributeDescriptions[3].format = VK_FORMAT_R32_SINT;
-	attributeDescriptions[3].offset = 0;
+	attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SINT;
+	attributeDescriptions[3].offset = offsetof(Vertex, boneIDs);
 
-	// Location 4: BoneWeights from Binding 4
-	attributeDescriptions[4].binding = 4;
+	attributeDescriptions[4].binding = 0;
 	attributeDescriptions[4].location = 4;
-	attributeDescriptions[4].format = VK_FORMAT_R32_SFLOAT;
-	attributeDescriptions[4].offset = 0;
+	attributeDescriptions[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attributeDescriptions[4].offset = offsetof(Vertex, boneWeights);
 
 	return attributeDescriptions;
 }
@@ -631,8 +607,9 @@ std::array<VkVertexInputAttributeDescription, 5> RendererVulkan::GetMeshAttribut
 void RendererVulkan::CreateFramebuffers() {
 	m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
 	for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
-		std::array<VkImageView, 3> attachments =
-		    {m_colorImageView, m_depthImageView, m_swapChainImageViews[i]};
+		std::array<VkImageView, 3> attachments = { m_colorImageView,
+			                                       m_depthImageView,
+			                                       m_swapChainImageViews[i] };
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -879,7 +856,11 @@ void RendererVulkan::CreateBuffer(
 	vkBindBufferMemory(m_device, buffer, bufferMemory, 0);
 }
 
-void RendererVulkan::LoadBuffer(VkBuffer dstBuffer, VkDeviceSize bufferSize, const void* bufferData) {
+void RendererVulkan::LoadBuffer(
+    VkBuffer dstBuffer,
+    VkDeviceSize bufferSize,
+    const void* bufferData
+) {
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	CreateBuffer(
@@ -927,8 +908,8 @@ void RendererVulkan::CopyBufferToImage(
 	region.imageSubresource.mipLevel = 0;
 	region.imageSubresource.baseArrayLayer = 0;
 	region.imageSubresource.layerCount = 1;
-	region.imageOffset = {0, 0, 0};
-	region.imageExtent = {width, height, 1};
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = { width, height, 1 };
 
 	vkCmdCopyBufferToImage(
 	    commandBuffer,
@@ -993,15 +974,16 @@ void RendererVulkan::GenerateMipmaps(
 		);
 
 		VkImageBlit blit{};
-		blit.srcOffsets[0] = {0, 0, 0};
-		blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+		blit.srcOffsets[0] = { 0, 0, 0 };
+		blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
 		blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.srcSubresource.mipLevel = i - 1;
 		blit.srcSubresource.baseArrayLayer = 0;
 		blit.srcSubresource.layerCount = 1;
-		blit.dstOffsets[0] = {0, 0, 0};
-		blit.dstOffsets[1] =
-		    {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+		blit.dstOffsets[0] = { 0, 0, 0 };
+		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1,
+			                   mipHeight > 1 ? mipHeight / 2 : 1,
+			                   1 };
 		blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		blit.dstSubresource.mipLevel = i;
 		blit.dstSubresource.baseArrayLayer = 0;
@@ -1167,4 +1149,4 @@ bool RendererVulkan::HasStencilComponent(VkFormat format) {
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-}
+} // namespace PixieRenderer

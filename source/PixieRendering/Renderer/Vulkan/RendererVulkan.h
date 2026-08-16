@@ -90,7 +90,7 @@ class RendererVulkan : public IRenderer {
 	    size_t size
 	);
 
-	MaterialHandle CreateMaterial(const char* vertShaderCode, const char* fragShaderCode);
+	MaterialHandle CreateMaterial(const Material* material);
 	void DestroyMaterial(MaterialHandle material);
 
 	ComputeProgramHandle CreateComputeProgram(const char* source);
@@ -132,7 +132,7 @@ class RendererVulkan : public IRenderer {
 	FrameBufferVulkan& GetFrameBufferEntry(FrameBufferHandle handle);
 
   public: // BACKEND
-	static constexpr uint32_t cMaxFramesInFlight = 2;
+	static constexpr uint32_t cMaxFramesInFlight = 3;
 
   private: // BACKEND
 	// General
@@ -242,6 +242,8 @@ class RendererVulkan : public IRenderer {
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+	VkPipeline CreatePipeline(const Material* materialInfo);
+
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
@@ -266,8 +268,8 @@ class RendererVulkan : public IRenderer {
 	bool CheckValidationLayerSupport();
 	bool HasStencilComponent(VkFormat format);
 
-	static std::array<VkVertexInputBindingDescription, 5> GetMeshBindingDescriptions();
-	static std::array<VkVertexInputAttributeDescription, 5> GetMeshAttributeDescriptions();
+	static std::vector<VkVertexInputBindingDescription> GetMeshBindingDescriptions();
+	static std::vector<VkVertexInputAttributeDescription> GetMeshAttributeDescriptions();
 };
 
 } // namespace PixieRenderer

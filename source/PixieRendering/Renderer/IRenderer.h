@@ -5,6 +5,7 @@
 #include "PixieRendering/ResourceHandles.h"
 #include "PixieRendering/Resources/Image2D.h"
 #include "PixieRendering/Resources/Mesh.h"
+#include "PixieRendering/Resources/Material.h"
 #include "PixieRendering/TextureEnums.h"
 
 namespace PixieRenderer {
@@ -93,7 +94,7 @@ class IRenderer {
 	) = 0;
 
 	virtual MaterialHandle
-	CreateMaterial(const char* vertexShaderSource, const char* fragmentShaderShource) = 0;
+	CreateMaterial(const Material* materialInfo) = 0;
 	virtual void DestroyMaterial(MaterialHandle handle) = 0;
 
 	virtual ComputeProgramHandle CreateComputeProgram(const char* source) = 0;
