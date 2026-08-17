@@ -25,7 +25,7 @@ IRenderer* CreateRenderer(Window* window) {
 	}
 	switch (window->GetRenderAPI()) {
 	case RenderAPI::OpenGL:
-		//return new RendererOpenGL(window);
+		return new RendererOpenGL(window);
 	default:
 		return new RendererVulkan(window);
 	}

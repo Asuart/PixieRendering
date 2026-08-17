@@ -1,5 +1,8 @@
 #include "RendererVulkan.h"
 
+#include <set>
+#include <algorithm>
+
 #include "../../Window/WindowVulkan.h"
 #include "DebugVulkan.h"
 
@@ -399,7 +402,7 @@ RendererVulkan::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& a
 }
 
 VkPresentModeKHR
-RendererVulkan::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+RendererVulkan::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>&) {
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 

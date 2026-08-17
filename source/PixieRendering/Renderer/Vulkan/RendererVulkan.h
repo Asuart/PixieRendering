@@ -1,12 +1,6 @@
 #pragma once
 #include "../IRenderer.h"
 
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <set>
-#include <stdexcept>
-#include <unordered_map>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -42,20 +36,15 @@ class RendererVulkan : public IRenderer {
 	void BindFrameBuffer(FrameBufferHandle handle);
 	void UnbindFrameBuffer();
 
-	TextureHandle CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format);
+	TextureHandle CreateTexture(const Image2D* image);
 	void DestroyTexture(TextureHandle handle);
-	void LoadTexture(
-	    TextureHandle handle,
-	    const uint8_t* data,
-	    glm::ivec2 resolution,
-	    TextureFormat format
-	);
+	void LoadTexture(TextureHandle handle, const Image2D* image);
 	void SetTextureFiltering(
 	    TextureHandle handle,
 	    TextureFiltering minFilter,
 	    TextureFiltering magFilter
 	);
-	void SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT);
+	void SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
 	void GenerateTextureMipmaps(TextureHandle handle);
 	glm::ivec2 GetTextureResolution(TextureHandle handle);
 	void BindTexture(
@@ -120,7 +109,7 @@ class RendererVulkan : public IRenderer {
 		MaterialHandle materialHandle;
 	};
 	std::vector<RenderRequest> m_renderRequests = {};
-	FrameBufferHandle m_activeFrameBuffer = FrameBufferHandle(-1);
+	FrameBufferHandle m_activeFrameBuffer = FrameBufferHandle();
 
 	TextureVulkan& GetTextureEntry(TextureHandle handle);
 	MeshVulkan& GetMeshEntry(MeshHandle handle);
@@ -255,7 +244,7 @@ class RendererVulkan : public IRenderer {
 	);
 	void CreateMaterialPipeline(
 	    VkPipelineLayout pipelineLayout,
-        VkRenderPass renderPass,
+	    VkRenderPass renderPass,
 	    const VkPipelineShaderStageCreateInfo* shaderStages,
 	    uint32_t shaderStagesCount,
 	    VkPipeline& outPipeline

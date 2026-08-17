@@ -2,13 +2,13 @@
 #include <vector>
 
 #include "../IRenderer.h"
-#include "MeshOpenGL.h"
-#include "TextureOpenGL.h"
 #include "FrameBufferOpenGL.h"
+#include "MeshOpenGL.h"
 #include "ShaderCompilationOpenGL.h"
-#include "ViewportStateOpenGL.h"
 #include "ShaderStorageBufferOpenGL.h"
+#include "TextureOpenGL.h"
 #include "UniformBufferOpenGL.h"
+#include "ViewportStateOpenGL.h"
 
 namespace PixieRenderer {
 
@@ -19,65 +19,90 @@ class RendererOpenGL : public IRenderer {
 	RendererOpenGL(Window* mainWindow);
 	~RendererOpenGL();
 
-	void StartFrame();
-	void EndFrame();
+	void StartFrame() override;
+	void EndFrame() override;
 
-	MeshHandle CreateMesh();
-	MeshHandle LoadMesh(const Mesh* mesh);
-	void LoadMesh(MeshHandle& handle, const Mesh* mesh);
-	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle);
+	MeshHandle CreateMesh(const Mesh* mesh) override;
+	void DestroyMesh(MeshHandle handle) override;
+	void LoadMesh(MeshHandle handle, const Mesh* mesh) override;
+	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) override;
 
-	FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution);
-	void ResizeFrameBuffer(FrameBufferHandle& handle, glm::ivec2 resolution);
-	void BindFrameBuffer(FrameBufferHandle handle);
-	void UnbindFrameBuffer();
+	FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution) override;
+	void DestroyFrameBuffer(FrameBufferHandle handle) override;
+	void ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) override;
+	void BindFrameBuffer(FrameBufferHandle handle) override;
+	void UnbindFrameBuffer() override;
 
-	TextureHandle CreateTexture(glm::ivec2 resolution, TextureFormat format);
-	TextureHandle LoadTexture(const Image2D* image);
-	void LoadTexture(TextureHandle& handle, const Image2D* image);
+	TextureHandle CreateTexture(const Image2D* image) override;
+	void DestroyTexture(TextureHandle handle) override;
+	void LoadTexture(TextureHandle handle, const Image2D* image) override;
 	void SetTextureFiltering(
 	    TextureHandle handle,
 	    TextureFiltering minFilter,
 	    TextureFiltering magFilter
-	);
-	void SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT);
-	void GenerateTextureMipmaps(TextureHandle handle);
-	glm::ivec2 GetTextureResolution(TextureHandle handle);
+	) override;
+	void SetTextureWrap(
+	    TextureHandle handle,
+	    TextureWrap wrapU,
+	    TextureWrap wrapV,
+	    TextureWrap wrapW
+	) override;
+	void GenerateTextureMipmaps(TextureHandle handle) override;
+	glm::ivec2 GetTextureResolution(TextureHandle handle) override;
 	void BindTexture(
 	    MaterialHandle materialHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
 	    uint64_t index
-	);
+	) override;
 	void BindTexture(
-	    ComputeProgramHandle computeMaterialHandle,
+	    ComputeProgramHandle computeProgramHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
 	    uint64_t index
-	);
+	) override;
 
-	ShaderStorageBufferHandle LoadShaderStorageBuffer(uint8_t* data, uint32_t size);
-	void LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, uint8_t* data, uint32_t size);
-	void BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t index);
-	uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle);
-	std::vector<uint8_t>
-	GetShaderStorageBufferData(ShaderStorageBufferHandle handle, uint32_t offset, uint32_t size);
+	ShaderStorageBufferHandle
+	CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) override;
+	void DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) override;
+	void LoadShaderStorageBuffer(
+	    ShaderStorageBufferHandle handle,
+	    const uint8_t* data,
+	    uint32_t size
+	) override;
+	uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) override;
+	std::vector<uint8_t> GetShaderStorageBufferData(
+	    ShaderStorageBufferHandle handle,
+	    uint32_t offset,
+	    uint32_t size
+	) override;
 
-	UniformBufferHandle LoadUniformBuffer(uint8_t* data, uint32_t size);
-	void LoadUniformBuffer(UniformBufferHandle handle, uint8_t* data, uint32_t size);
-	void BindUniformBuffer(UniformBufferHandle handle, uint32_t index);
+	UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size) override;
+	void DestroyUniformBuffer(UniformBufferHandle handle) override;
+	void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) override;
+	void LoadUniformBuffer(
+	    MaterialHandle handle,
+	    const std::string& name,
+	    const void* data,
+	    size_t size
+	) override;
 
-	MaterialHandle
-	CreateShader(const std::string& vertexShaderSource, const std::string fragmentShaderShource);
-	ComputeProgramHandle CreateComputeShader(const std::string& source);
-	void DispatchComputeShader(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z);
+	MaterialHandle CreateMaterial(const Material* materialInfo) override;
+	void DestroyMaterial(MaterialHandle handle) override;
 
-	void ResizeViewport(glm::ivec2 resolution);
-	void MemoryBarriersAll();
+	ComputeProgramHandle CreateComputeProgram(const char* source) override;
+	void DestroyComputeProgram(ComputeProgramHandle handle) override;
+	void
+	DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z) override;
 
-	uint64_t GetInternalID(TextureHandle handle);
-	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle);
-	uint64_t GetInternalDepthAttachmentID(FrameBufferHandle handle);
+	void SetViewport(glm::ivec2 start, glm::ivec2 resolution) override;
+
+	void WaitIdle() override;
+	void MemoryBarriersAll() override;
+
+	uint64_t GetInternalID(TextureHandle handle) override;
+	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle) override;
+	uint64_t GetInternalDepthAttachmentID(FrameBufferHandle handle) override;
 
   private:
 	std::vector<TextureOpenGL> m_textures;

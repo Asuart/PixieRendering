@@ -17,8 +17,13 @@ ShaderBinding::ShaderBinding(
     uint32_t _blockSize,
     const std::string& _name
 )
-    : binding(_binding), set(_set), type(_type), count(_count), stageFlags(_stageFlags),
-      blockSize(_blockSize), name(_name) {
+    : binding(_binding),
+      set(_set),
+      type(_type),
+      count(_count),
+      stageFlags(_stageFlags),
+      blockSize(_blockSize),
+      name(_name) {
 }
 
 void ShaderCompilerVulkan::Initialize() {
@@ -37,26 +42,26 @@ void ShaderCompilerVulkan::Free() {
 
 SpirVBinary CompileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource) {
 	const glslang_input_t input = {
-	    .language = GLSLANG_SOURCE_GLSL,
-	    .stage = stage,
-	    .client = GLSLANG_CLIENT_VULKAN,
-	    .client_version = GLSLANG_TARGET_VULKAN_1_0,
-	    .target_language = GLSLANG_TARGET_SPV,
-	    .target_language_version = GLSLANG_TARGET_SPV_1_0,
-	    .code = shaderSource,
-	    .default_version = 100,
-	    .default_profile = GLSLANG_NO_PROFILE,
-	    .force_default_version_and_profile = false,
-	    .forward_compatible = false,
-	    .messages = GLSLANG_MSG_DEFAULT_BIT,
-	    .resource = glslang_default_resource(),
+		.language = GLSLANG_SOURCE_GLSL,
+		.stage = stage,
+		.client = GLSLANG_CLIENT_VULKAN,
+		.client_version = GLSLANG_TARGET_VULKAN_1_0,
+		.target_language = GLSLANG_TARGET_SPV,
+		.target_language_version = GLSLANG_TARGET_SPV_1_0,
+		.code = shaderSource,
+		.default_version = 100,
+		.default_profile = GLSLANG_NO_PROFILE,
+		.force_default_version_and_profile = false,
+		.forward_compatible = false,
+		.messages = GLSLANG_MSG_DEFAULT_BIT,
+		.resource = glslang_default_resource(),
 	};
 
 	glslang_shader_t* shader = glslang_shader_create(&input);
 
 	SpirVBinary bin = {
-	    .words = NULL,
-	    .size = 0,
+		.words = NULL,
+		.size = 0,
 	};
 
 	if (!glslang_shader_preprocess(shader, &input)) {
@@ -92,7 +97,7 @@ SpirVBinary CompileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shade
 	glslang_program_SPIRV_generate(program, stage);
 
 	bin.size = static_cast<int32_t>(glslang_program_SPIRV_get_size(program));
-	bin.words = (uint32_t*)malloc(bin.size * sizeof(uint32_t));
+	bin.words = new uint32_t(bin.size);
 	glslang_program_SPIRV_get(program, bin.words);
 
 	const char* spirv_messages = glslang_program_SPIRV_get_messages(program);
@@ -123,13 +128,13 @@ VkShaderModule ShaderCompilerVulkan::CreateShaderModule(VkDevice device, SpirVBi
 CompiledShader ShaderCompilerVulkan::CompileShader(
     VkDevice device,
     const char* vertexShaderSource,
-    const char* framgentShaderSource
+    const char* fragmentShaderSource
 ) {
 
 	SpirVBinary vertexBinary =
 	    CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_VERTEX, vertexShaderSource);
 	SpirVBinary fragmentBinary =
-	    CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_FRAGMENT, framgentShaderSource);
+	    CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_FRAGMENT, fragmentShaderSource);
 
 	BindingsInfo vertexInfo = ReflectSPIRV(vertexBinary);
 	BindingsInfo fragmentInfo = ReflectSPIRV(fragmentBinary);
@@ -164,11 +169,9 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName = "main";
 
-	return {
-	    {vertShaderModule, fragShaderModule},
-	    {vertShaderStageInfo, fragShaderStageInfo},
-	    finalInfo
-	};
+	return { { vertShaderModule, fragShaderModule },
+		     { vertShaderStageInfo, fragShaderStageInfo },
+		     finalInfo };
 }
 
 CompiledComputeShader
@@ -183,7 +186,7 @@ ShaderCompilerVulkan::CompileComputeShader(VkDevice device, const char* source) 
 	vertShaderStageInfo.module = shaderModule;
 	vertShaderStageInfo.pName = "main";
 
-	return {shaderModule, vertShaderStageInfo};
+	return { shaderModule, vertShaderStageInfo };
 }
 
 BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {

@@ -4,8 +4,8 @@
 #include "PixieRendering/RenderAPI.h"
 #include "PixieRendering/ResourceHandles.h"
 #include "PixieRendering/Resources/Image2D.h"
-#include "PixieRendering/Resources/Mesh.h"
 #include "PixieRendering/Resources/Material.h"
+#include "PixieRendering/Resources/Mesh.h"
 #include "PixieRendering/TextureEnums.h"
 
 namespace PixieRenderer {
@@ -41,21 +41,20 @@ class IRenderer {
 	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
 	virtual void UnbindFrameBuffer() = 0;
 
-	virtual TextureHandle
-	CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format) = 0;
+	virtual TextureHandle CreateTexture(const Image2D* image) = 0;
 	virtual void DestroyTexture(TextureHandle handle) = 0;
-	virtual void LoadTexture(
-	    TextureHandle handle,
-	    const uint8_t* data,
-	    glm::ivec2 resolution,
-	    TextureFormat format
-	) = 0;
+	virtual void LoadTexture(TextureHandle handle, const Image2D* image) = 0;
 	virtual void SetTextureFiltering(
 	    TextureHandle handle,
 	    TextureFiltering minFilter,
 	    TextureFiltering magFilter
 	) = 0;
-	virtual void SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT) = 0;
+	virtual void SetTextureWrap(
+	    TextureHandle handle,
+	    TextureWrap wrapU,
+	    TextureWrap wrapV,
+	    TextureWrap wrapW
+	) = 0;
 	virtual void GenerateTextureMipmaps(TextureHandle handle) = 0;
 	virtual glm::ivec2 GetTextureResolution(TextureHandle handle) = 0;
 	virtual void BindTexture(
@@ -74,8 +73,11 @@ class IRenderer {
 	virtual ShaderStorageBufferHandle
 	CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) = 0;
 	virtual void DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) = 0;
-	virtual void
-	LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
+	virtual void LoadShaderStorageBuffer(
+	    ShaderStorageBufferHandle handle,
+	    const uint8_t* data,
+	    uint32_t size
+	) = 0;
 	virtual uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) = 0;
 	virtual std::vector<uint8_t> GetShaderStorageBufferData(
 	    ShaderStorageBufferHandle handle,
@@ -85,7 +87,8 @@ class IRenderer {
 
 	virtual UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size) = 0;
 	virtual void DestroyUniformBuffer(UniformBufferHandle handle) = 0;
-	virtual void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
+	virtual void
+	LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
 	virtual void LoadUniformBuffer(
 	    MaterialHandle handle,
 	    const std::string& name,
@@ -93,8 +96,7 @@ class IRenderer {
 	    size_t size
 	) = 0;
 
-	virtual MaterialHandle
-	CreateMaterial(const Material* materialInfo) = 0;
+	virtual MaterialHandle CreateMaterial(const Material* materialInfo) = 0;
 	virtual void DestroyMaterial(MaterialHandle handle) = 0;
 
 	virtual ComputeProgramHandle CreateComputeProgram(const char* source) = 0;
@@ -116,8 +118,8 @@ class IRenderer {
 	RenderAPI m_renderAPI = RenderAPI::Undefined;
 	uint32_t m_renderWidth = 0;
 	uint32_t m_renderHeight = 0;
-	glm::ivec2 m_viewportStart = {0, 0};
-	glm::ivec2 m_viewportResolution = {0, 0};
+	glm::ivec2 m_viewportStart = { 0, 0 };
+	glm::ivec2 m_viewportResolution = { 0, 0 };
 };
 
 } // namespace PixieRenderer

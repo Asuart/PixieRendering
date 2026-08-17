@@ -31,208 +31,184 @@ void RendererOpenGL::EndFrame() {
 	assert(m_viewportStates.size() == 0);
 }
 
-MeshHandle RendererOpenGL::CreateMesh() {
+MeshHandle RendererOpenGL::CreateMesh(const Mesh* mesh) {
 	MeshOpenGL meshEntry;
-	m_meshes.push_back(meshEntry);
-	return MeshHandle(static_cast<int32_t>(m_meshes.size() - 1));
-}
 
-MeshHandle RendererOpenGL::LoadMesh(const Mesh* mesh) {
-	MeshOpenGL meshEntry;
-	//meshEntry.indicesCount = static_cast<GLuint>(mesh->m_indices.size());
+	if (mesh != nullptr) {
+		meshEntry.indexesCount = static_cast<GLuint>(mesh->indexes.size());
 
-	glGenVertexArrays(1, &meshEntry.vertexArrayObject);
-	glBindVertexArray(meshEntry.vertexArrayObject);
+		glGenVertexArrays(1, &meshEntry.vertexArrayObject);
+		glBindVertexArray(meshEntry.vertexArrayObject);
 
-	//if (mesh->m_indices.size()) {
-	//	glGenBuffers(1, &meshEntry.indicesBuffer);
-	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEntry.indicesBuffer);
-	//	glBufferData(
-	//	    GL_ELEMENT_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_indices[0]) * mesh->m_indices.size(),
-	//	    &mesh->m_indices[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//}
+		if (mesh->indexes.size()) {
+			glGenBuffers(1, &meshEntry.indexBuffer);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEntry.indexBuffer);
+			glBufferData(
+			    GL_ELEMENT_ARRAY_BUFFER,
+			    sizeof(mesh->indexes[0]) * mesh->indexes.size(),
+			    &mesh->indexes[0],
+			    GL_STATIC_DRAW
+			);
+		}
 
-	//if (mesh->m_positions.size()) {
-	//	glGenBuffers(1, &meshEntry.positionsBuffer);
-	//	glBindBuffer(GL_ARRAY_BUFFER, meshEntry.positionsBuffer);
-	//	glBufferData(
-	//	    GL_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_positions[0]) * mesh->m_positions.size(),
-	//	    &mesh->m_positions[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh->m_positions[0]), 0);
-	//	glEnableVertexAttribArray(0);
-	//}
+		if (mesh->vertexes.size()) {
+			glGenBuffers(1, &meshEntry.vertexBuffer);
+			glBindBuffer(GL_ARRAY_BUFFER, meshEntry.vertexBuffer);
+			glBufferData(
+			    GL_ARRAY_BUFFER,
+			    sizeof(mesh->vertexes[0]) * mesh->vertexes.size(),
+			    &mesh->vertexes[0],
+			    GL_STATIC_DRAW
+			);
 
-	//if (mesh->m_normals.size()) {
-	//	glGenBuffers(1, &meshEntry.normalsBuffer);
-	//	glBindBuffer(GL_ARRAY_BUFFER, meshEntry.normalsBuffer);
-	//	glBufferData(
-	//	    GL_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_normals[0]) * mesh->m_normals.size(),
-	//	    &mesh->m_normals[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh->m_normals[0]), 0);
-	//	glEnableVertexAttribArray(1);
-	//}
+			glVertexAttribPointer(
+			    0,
+			    3,
+			    GL_FLOAT,
+			    GL_FALSE,
+			    sizeof(Vertex),
+			    (const void*)offsetof(Vertex, position)
+			);
+			glEnableVertexAttribArray(0);
 
-	//if (mesh->m_texCoords.size()) {
-	//	glGenBuffers(1, &meshEntry.texCoordsBuffer);
-	//	glBindBuffer(GL_ARRAY_BUFFER, meshEntry.texCoordsBuffer);
-	//	glBufferData(
-	//	    GL_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_texCoords[0]) * mesh->m_texCoords.size(),
-	//	    &mesh->m_texCoords[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh->m_texCoords[0]), 0);
-	//	glEnableVertexAttribArray(2);
-	//}
+			glVertexAttribPointer(
+			    1,
+			    3,
+			    GL_FLOAT,
+			    GL_FALSE,
+			    sizeof(Vertex),
+			    (const void*)offsetof(Vertex, normal)
+			);
+			glEnableVertexAttribArray(1);
 
-	//if (mesh->m_boneIDs.size()) {
-	//	glGenBuffers(1, &meshEntry.boneIDsBuffer);
-	//	glBindBuffer(GL_ARRAY_BUFFER, meshEntry.boneIDsBuffer);
-	//	glBufferData(
-	//	    GL_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_boneIDs[0]) * mesh->m_boneIDs.size(),
-	//	    &mesh->m_boneIDs[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//	glVertexAttribPointer(
-	//	    3,
-	//	    Mesh::cBonesPerVertex,
-	//	    GL_INT,
-	//	    GL_FALSE,
-	//	    sizeof(mesh->m_boneIDs[0]) * Mesh::cBonesPerVertex,
-	//	    0
-	//	);
-	//	glEnableVertexAttribArray(3);
-	//}
+			glVertexAttribPointer(
+			    2,
+			    2,
+			    GL_FLOAT,
+			    GL_FALSE,
+			    sizeof(Vertex),
+			    (const void*)offsetof(Vertex, uv)
+			);
+			glEnableVertexAttribArray(2);
 
-	//if (mesh->m_boneWeights.size()) {
-	//	glGenBuffers(1, &meshEntry.boneWeightBuffer);
-	//	glBindBuffer(GL_ARRAY_BUFFER, meshEntry.boneWeightBuffer);
-	//	glBufferData(
-	//	    GL_ARRAY_BUFFER,
-	//	    sizeof(mesh->m_boneWeights[0]) * mesh->m_boneWeights.size(),
-	//	    &mesh->m_boneWeights[0],
-	//	    GL_STATIC_DRAW
-	//	);
-	//	glVertexAttribPointer(
-	//	    4,
-	//	    Mesh::cBonesPerVertex,
-	//	    GL_FLOAT,
-	//	    GL_FALSE,
-	//	    sizeof(mesh->m_boneWeights[0]) * Mesh::cBonesPerVertex,
-	//	    0
-	//	);
-	//	glEnableVertexAttribArray(4);
-	//}
+			glVertexAttribPointer(
+			    3,
+			    Vertex::cBonesPerVertex,
+			    GL_INT,
+			    GL_FALSE,
+			    sizeof(Vertex),
+			    (const void*)offsetof(Vertex, boneIDs)
+			);
+			glEnableVertexAttribArray(3);
 
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glVertexAttribPointer(
+			    4,
+			    Vertex::cBonesPerVertex,
+			    GL_FLOAT,
+			    GL_FALSE,
+			    sizeof(Vertex),
+			    (const void*)offsetof(Vertex, boneWeights)
+			);
+			glEnableVertexAttribArray(4);
+		}
+
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
 
 	m_meshes.push_back(meshEntry);
 
 	return MeshHandle(static_cast<int32_t>(m_meshes.size() - 1));
 }
 
-void RendererOpenGL::LoadMesh(MeshHandle& handle, const Mesh* mesh) {
+void RendererOpenGL::DestroyMesh(MeshHandle handle) {
+	MeshOpenGL& mesh = GetMeshEntry(handle);
+	mesh.indexesCount = 0;
+	glDeleteBuffers(1, &mesh.vertexBuffer);
+	mesh.vertexBuffer = 0;
+	glDeleteBuffers(1, &mesh.indexBuffer);
+	mesh.indexBuffer = 0;
+	glDeleteVertexArrays(1, &mesh.vertexArrayObject);
+	mesh.vertexArrayObject = 0;
+}
+
+void RendererOpenGL::LoadMesh(MeshHandle handle, const Mesh* mesh) {
 	MeshOpenGL& meshEntry = GetMeshEntry(handle);
 
-	/*meshEntry.indicesCount = static_cast<GLuint>(mesh->m_indices.size());
+	meshEntry.indexesCount = static_cast<GLuint>(mesh->indexes.size());
 
 	glBindVertexArray(meshEntry.vertexArrayObject);
 
-	if (mesh->m_indices.size()) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEntry.indicesBuffer);
+	if (mesh->indexes.size()) {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshEntry.indexBuffer);
 		glBufferData(
 		    GL_ELEMENT_ARRAY_BUFFER,
-		    sizeof(mesh->m_indices[0]) * mesh->m_indices.size(),
-		    &mesh->m_indices[0],
+		    sizeof(mesh->indexes[0]) * mesh->indexes.size(),
+		    &mesh->indexes[0],
 		    GL_STATIC_DRAW
 		);
 	}
 
-	if (mesh->m_positions.size()) {
-		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.positionsBuffer);
+	if (mesh->vertexes.size()) {
+		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.vertexBuffer);
 		glBufferData(
 		    GL_ARRAY_BUFFER,
-		    sizeof(mesh->m_positions[0]) * mesh->m_positions.size(),
-		    &mesh->m_positions[0],
+		    sizeof(mesh->vertexes[0]) * mesh->vertexes.size(),
+		    &mesh->vertexes[0],
 		    GL_STATIC_DRAW
 		);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(mesh->m_positions[0]), 0);
-		glEnableVertexAttribArray(0);
-	}
 
-	if (mesh->m_normals.size()) {
-		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.normalsBuffer);
-		glBufferData(
-		    GL_ARRAY_BUFFER,
-		    sizeof(mesh->m_normals[0]) * mesh->m_normals.size(),
-		    &mesh->m_normals[0],
-		    GL_STATIC_DRAW
-		);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(mesh->m_normals[0]), 0);
-		glEnableVertexAttribArray(1);
-	}
-
-	if (mesh->m_texCoords.size()) {
-		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.texCoordsBuffer);
-		glBufferData(
-		    GL_ARRAY_BUFFER,
-		    sizeof(mesh->m_texCoords[0]) * mesh->m_texCoords.size(),
-		    &mesh->m_texCoords[0],
-		    GL_STATIC_DRAW
-		);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(mesh->m_texCoords[0]), 0);
-		glEnableVertexAttribArray(2);
-	}
-
-	if (mesh->m_boneIDs.size()) {
-		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.boneIDsBuffer);
-		glBufferData(
-		    GL_ARRAY_BUFFER,
-		    sizeof(mesh->m_boneIDs[0]) * mesh->m_boneIDs.size(),
-		    &mesh->m_boneIDs[0],
-		    GL_STATIC_DRAW
-		);
 		glVertexAttribPointer(
+		    0,
 		    3,
-		    Mesh::cBonesPerVertex,
-		    GL_INT,
-		    GL_FALSE,
-		    sizeof(mesh->m_boneIDs[0]) * Mesh::cBonesPerVertex,
-		    0
-		);
-		glEnableVertexAttribArray(3);
-	}
-
-	if (mesh->m_boneWeights.size()) {
-		glBindBuffer(GL_ARRAY_BUFFER, meshEntry.boneWeightBuffer);
-		glBufferData(
-		    GL_ARRAY_BUFFER,
-		    sizeof(mesh->m_boneWeights[0]) * mesh->m_boneWeights.size(),
-		    &mesh->m_boneWeights[0],
-		    GL_STATIC_DRAW
-		);
-		glVertexAttribPointer(
-		    4,
-		    Mesh::cBonesPerVertex,
 		    GL_FLOAT,
 		    GL_FALSE,
-		    sizeof(mesh->m_boneWeights[0]) * Mesh::cBonesPerVertex,
-		    0
+		    sizeof(Vertex),
+		    (const void*)offsetof(Vertex, position)
+		);
+		glEnableVertexAttribArray(0);
+
+		glVertexAttribPointer(
+		    1,
+		    3,
+		    GL_FLOAT,
+		    GL_FALSE,
+		    sizeof(Vertex),
+		    (const void*)offsetof(Vertex, normal)
+		);
+		glEnableVertexAttribArray(1);
+
+		glVertexAttribPointer(
+		    2,
+		    2,
+		    GL_FLOAT,
+		    GL_FALSE,
+		    sizeof(Vertex),
+		    (const void*)offsetof(Vertex, uv)
+		);
+		glEnableVertexAttribArray(2);
+
+		glVertexAttribPointer(
+		    3,
+		    Vertex::cBonesPerVertex,
+		    GL_INT,
+		    GL_FALSE,
+		    sizeof(Vertex),
+		    (const void*)offsetof(Vertex, boneIDs)
+		);
+		glEnableVertexAttribArray(3);
+
+		glVertexAttribPointer(
+		    4,
+		    Vertex::cBonesPerVertex,
+		    GL_FLOAT,
+		    GL_FALSE,
+		    sizeof(Vertex),
+		    (const void*)offsetof(Vertex, boneWeights)
 		);
 		glEnableVertexAttribArray(4);
-	}*/
+	}
 
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -244,7 +220,7 @@ void RendererOpenGL::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 	const MeshOpenGL& meshEntry = GetMeshEntry(meshHandle);
 	glUseProgram(shaderEntry.id);
 	glBindVertexArray(meshEntry.vertexArrayObject);
-	glDrawElements(GL_TRIANGLES, meshEntry.indicesCount, GL_UNSIGNED_INT, NULL);
+	glDrawElements(GL_TRIANGLES, meshEntry.indexesCount, GL_UNSIGNED_INT, NULL);
 	glBindVertexArray(0);
 	glUseProgram(0);
 }
@@ -254,7 +230,12 @@ FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::ivec2 resolution) {
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
 
-void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle& handle, glm::ivec2 resolution) {
+void RendererOpenGL::DestroyFrameBuffer(FrameBufferHandle handle) {
+	FrameBufferOpenGL frameBuffer = GetFrameBufferEntry(handle);
+	// TODO: destroy
+}
+
+void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) {
 	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
 	frameBufferEntry.Resize(resolution);
 }
@@ -271,108 +252,116 @@ void RendererOpenGL::UnbindFrameBuffer() {
 	RestoreViewportState();
 }
 
-void RendererOpenGL::ResizeViewport(glm::ivec2 resolution) {
-	glViewport(0, 0, resolution.x, resolution.y);
-}
-
-TextureHandle RendererOpenGL::CreateTexture(glm::ivec2 resolution, TextureFormat format) {
+TextureHandle RendererOpenGL::CreateTexture(const Image2D* image) {
 	TextureOpenGL textureEntry;
-	textureEntry.resolution = resolution;
 
-	glGenTextures(1, &textureEntry.id);
-	glBindTexture(GL_TEXTURE_2D, textureEntry.id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (image != nullptr) {
+		textureEntry.resolution = image->resolution;
 
-	switch (format) {
-	case TextureFormat::Red8:
-		textureEntry.internalFormat = GL_RED;
-		glTexImage2D(
+		glGenTextures(1, &textureEntry.id);
+		glBindTexture(GL_TEXTURE_2D, textureEntry.id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, CastTextureWrapOpenGL(image->wrapU));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, CastTextureWrapOpenGL(image->wrapV));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, CastTextureWrapOpenGL(image->wrapW));
+		glTexParameteri(
 		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RED,
-		    GL_UNSIGNED_BYTE,
-		    nullptr
+		    GL_TEXTURE_MIN_FILTER,
+		    CastTextureFilteringOpenGL(image->minFiltering)
 		);
-		break;
-	case TextureFormat::RGB8:
-		textureEntry.internalFormat = GL_RGB;
-		glTexImage2D(
+		glTexParameteri(
 		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RGB,
-		    GL_UNSIGNED_BYTE,
-		    nullptr
+		    GL_TEXTURE_MAG_FILTER,
+		    CastTextureFilteringOpenGL(image->magFiltering)
 		);
-		break;
-	case TextureFormat::RGBA8:
-		textureEntry.internalFormat = GL_RGBA;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RGBA,
-		    GL_UNSIGNED_BYTE,
-		    nullptr
-		);
-		break;
-	case TextureFormat::Red32f:
-		textureEntry.internalFormat = GL_R32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RED,
-		    GL_FLOAT,
-		    nullptr
-		);
-		break;
-	case TextureFormat::RGB32f:
-		textureEntry.internalFormat = GL_RGB32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RGB,
-		    GL_FLOAT,
-		    nullptr
-		);
-		break;
-	case TextureFormat::RGBA32f:
-		textureEntry.internalFormat = GL_RGBA32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    resolution.x,
-		    resolution.y,
-		    0,
-		    GL_RGBA,
-		    GL_FLOAT,
-		    nullptr
-		);
-		break;
-	default:
-		throw "RendererOpenGL::CreateTexture: unhandled texture type";
+
+		switch (image->format) {
+		case TextureFormat::Red8:
+			textureEntry.internalFormat = GL_RED;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RED,
+			    GL_UNSIGNED_BYTE,
+			    image->pixels.data()
+			);
+			break;
+		case TextureFormat::RGB8:
+			textureEntry.internalFormat = GL_RGB;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RGB,
+			    GL_UNSIGNED_BYTE,
+			    image->pixels.data()
+			);
+			break;
+		case TextureFormat::RGBA8:
+			textureEntry.internalFormat = GL_RGBA;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RGBA,
+			    GL_UNSIGNED_BYTE,
+			    image->pixels.data()
+			);
+			break;
+		case TextureFormat::Red32f:
+			textureEntry.internalFormat = GL_R32F;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RED,
+			    GL_FLOAT,
+			    image->pixels.data()
+			);
+			break;
+		case TextureFormat::RGB32f:
+			textureEntry.internalFormat = GL_RGB32F;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RGB,
+			    GL_FLOAT,
+			    image->pixels.data()
+			);
+			break;
+		case TextureFormat::RGBA32f:
+			textureEntry.internalFormat = GL_RGBA32F;
+			glTexImage2D(
+			    GL_TEXTURE_2D,
+			    0,
+			    textureEntry.internalFormat,
+			    image->resolution.x,
+			    image->resolution.y,
+			    0,
+			    GL_RGBA,
+			    GL_FLOAT,
+			    image->pixels.data()
+			);
+			break;
+		default:
+			throw "RendererOpenGL::CreateTexture: unhandled texture type";
+		}
 	}
 
 	m_textures.push_back(textureEntry);
@@ -380,112 +369,13 @@ TextureHandle RendererOpenGL::CreateTexture(glm::ivec2 resolution, TextureFormat
 	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 }
 
-TextureHandle RendererOpenGL::LoadTexture(const Image2D* image) {
-	TextureOpenGL textureEntry;
-	textureEntry.resolution = image->resolution;
-
-	glGenTextures(1, &textureEntry.id);
-	glBindTexture(GL_TEXTURE_2D, textureEntry.id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	switch (image->format) {
-	case TextureFormat::Red8:
-		textureEntry.internalFormat = GL_RED;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RED,
-		    GL_UNSIGNED_BYTE,
-		    image->data.data()
-		);
-		break;
-	case TextureFormat::RGB8:
-		textureEntry.internalFormat = GL_RGB;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RGB,
-		    GL_UNSIGNED_BYTE,
-		    image->data.data()
-		);
-		break;
-	case TextureFormat::RGBA8:
-		textureEntry.internalFormat = GL_RGBA;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RGBA,
-		    GL_UNSIGNED_BYTE,
-		    image->data.data()
-		);
-		break;
-	case TextureFormat::Red32f:
-		textureEntry.internalFormat = GL_R32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RED,
-		    GL_FLOAT,
-		    image->data.data()
-		);
-		break;
-	case TextureFormat::RGB32f:
-		textureEntry.internalFormat = GL_RGB32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RGB,
-		    GL_FLOAT,
-		    image->data.data()
-		);
-		break;
-	case TextureFormat::RGBA32f:
-		textureEntry.internalFormat = GL_RGBA32F;
-		glTexImage2D(
-		    GL_TEXTURE_2D,
-		    0,
-		    textureEntry.internalFormat,
-		    image->resolution.x,
-		    image->resolution.y,
-		    0,
-		    GL_RGBA,
-		    GL_FLOAT,
-		    image->data.data()
-		);
-		break;
-	default:
-		throw "RendererOpenGL::CreateTexture: unhandled texture type";
-	}
-
-	m_textures.push_back(textureEntry);
-
-	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
+void RendererOpenGL::DestroyTexture(TextureHandle handle) {
+	TextureOpenGL& texture = GetTextureEntry(handle);
+	glDeleteTextures(1, &texture.id);
+	texture.id = 0;
 }
 
-void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
+void RendererOpenGL::LoadTexture(TextureHandle handle, const Image2D* image) {
 	TextureOpenGL& entry = GetTextureEntry(handle);
 	entry.resolution = image->resolution;
 
@@ -501,7 +391,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RED,
 		    GL_UNSIGNED_BYTE,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	case TextureFormat::RGB8:
@@ -515,7 +405,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RGB,
 		    GL_UNSIGNED_BYTE,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	case TextureFormat::RGBA8:
@@ -529,7 +419,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RGBA,
 		    GL_UNSIGNED_BYTE,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	case TextureFormat::Red32f:
@@ -543,7 +433,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RED,
 		    GL_FLOAT,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	case TextureFormat::RGB32f:
@@ -557,7 +447,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RGB,
 		    GL_FLOAT,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	case TextureFormat::RGBA32f:
@@ -571,7 +461,7 @@ void RendererOpenGL::LoadTexture(TextureHandle& handle, const Image2D* image) {
 		    0,
 		    GL_RGBA,
 		    GL_FLOAT,
-		    image->data.data()
+		    image->pixels.data()
 		);
 		break;
 	default:
@@ -591,11 +481,17 @@ void RendererOpenGL::SetTextureFiltering(
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void RendererOpenGL::SetTextureWrap(TextureHandle handle, TextureWrap wrapS, TextureWrap wrapT) {
+void RendererOpenGL::SetTextureWrap(
+    TextureHandle handle,
+    TextureWrap wrapU,
+    TextureWrap wrapV,
+    TextureWrap wrapW
+) {
 	const TextureOpenGL& texture = GetTextureEntry(handle);
 	glBindTexture(GL_TEXTURE_2D, texture.id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, CastTextureWrapOpenGL(wrapS));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, CastTextureWrapOpenGL(wrapT));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, CastTextureWrapOpenGL(wrapU));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, CastTextureWrapOpenGL(wrapV));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, CastTextureWrapOpenGL(wrapW));
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -611,93 +507,6 @@ glm::ivec2 RendererOpenGL::GetTextureResolution(TextureHandle handle) {
 	return texture.resolution;
 }
 
-ShaderStorageBufferHandle RendererOpenGL::LoadShaderStorageBuffer(uint8_t* data, uint32_t size) {
-	ShaderStorageBufferOpenGL entry;
-	entry.size = size;
-	glGenBuffers(1, &entry.id);
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
-
-	m_shaderStorageBuffers.push_back(entry);
-	return ShaderStorageBufferHandle(m_shaderStorageBuffers.size() - 1);
-}
-
-void RendererOpenGL::LoadShaderStorageBuffer(
-    ShaderStorageBufferHandle handle,
-    uint8_t* data,
-    uint32_t size
-) {
-	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
-	entry.size = size;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
-}
-
-void RendererOpenGL::BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t index) {
-	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, entry.id);
-}
-
-uint32_t RendererOpenGL::GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) {
-	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
-	return entry.size;
-}
-
-std::vector<uint8_t> RendererOpenGL::GetShaderStorageBufferData(
-    ShaderStorageBufferHandle handle,
-    uint32_t offset,
-    uint32_t size
-) {
-	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
-	std::vector<uint8_t> values(size);
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, size, (GLvoid*)values.data());
-
-	return values;
-}
-
-UniformBufferHandle RendererOpenGL::LoadUniformBuffer(uint8_t* data, uint32_t size) {
-	UniformBufferOpenGL entry;
-	entry.size = size;
-	glGenBuffers(1, &entry.id);
-
-	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
-	glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
-
-	m_uniformBuffers.push_back(entry);
-	return UniformBufferHandle(m_uniformBuffers.size() - 1);
-}
-
-void RendererOpenGL::LoadUniformBuffer(UniformBufferHandle handle, uint8_t* data, uint32_t size) {
-	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
-	entry.size = size;
-
-	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
-	glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
-}
-
-void RendererOpenGL::BindUniformBuffer(UniformBufferHandle handle, uint32_t index) {
-	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
-
-	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
-	glBindBufferBase(GL_UNIFORM_BUFFER, index, entry.id);
-}
-
-MaterialHandle RendererOpenGL::CreateShader(
-    const std::string& vertexShaderSource,
-    const std::string fragmentShaderShource
-) {
-	ShaderOpenGL shaderEntry =
-	    CompileShaderOpenGL(vertexShaderSource.c_str(), fragmentShaderShource.c_str());
-	m_shaders.push_back(shaderEntry);
-	return MaterialHandle(m_shaders.size() - 1);
-}
-
 void RendererOpenGL::BindTexture(
     MaterialHandle materialHandle,
     const std::string& name,
@@ -710,24 +519,6 @@ void RendererOpenGL::BindTexture(
 	// SetUniform1i(materialHandle, name, static_cast<int32_t>(index));
 	(void)name;
 	(void)materialHandle;
-}
-
-ComputeProgramHandle RendererOpenGL::CreateComputeShader(const std::string& source) {
-	ComputeShaderOpenGL computeShaderEntry = CompileComputeShaderOpenGL(source.c_str());
-	m_computeShaders.push_back(computeShaderEntry);
-	return ComputeProgramHandle(m_computeShaders.size() - 1);
-}
-
-void RendererOpenGL::DispatchComputeShader(
-    ComputeProgramHandle handle,
-    int32_t x,
-    int32_t y,
-    int32_t z
-) {
-	ComputeShaderOpenGL computeShaderEntry = GetComputeShaderEntry(handle);
-	glUseProgram(computeShaderEntry.id);
-	glDispatchCompute(x, y, z);
-	glUseProgram(0);
 }
 
 void RendererOpenGL::BindTexture(
@@ -749,6 +540,157 @@ void RendererOpenGL::BindTexture(
 	// SetUniform1i(computeMaterialHandle, name, static_cast<int32_t>(index));
 	(void)name;
 	(void)computeMaterialHandle;
+}
+
+ShaderStorageBufferHandle
+RendererOpenGL::CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) {
+	ShaderStorageBufferOpenGL entry;
+	entry.size = size;
+	glGenBuffers(1, &entry.id);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
+
+	m_shaderStorageBuffers.push_back(entry);
+	return ShaderStorageBufferHandle(m_shaderStorageBuffers.size() - 1);
+}
+
+void RendererOpenGL::DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) {
+	ShaderStorageBufferOpenGL& buffer = GetShaderStorageBufferEntry(handle);
+	glDeleteBuffers(1, &buffer.id);
+	buffer.id = 0;
+	buffer.size = 0;
+}
+
+void RendererOpenGL::LoadShaderStorageBuffer(
+    ShaderStorageBufferHandle handle,
+    const uint8_t* data,
+    uint32_t size
+) {
+	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
+	entry.size = size;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
+}
+
+// void RendererOpenGL::BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t index) {
+// 	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
+
+// 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
+// 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, entry.id);
+// }
+
+uint32_t RendererOpenGL::GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) {
+	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
+	return entry.size;
+}
+
+std::vector<uint8_t> RendererOpenGL::GetShaderStorageBufferData(
+    ShaderStorageBufferHandle handle,
+    uint32_t offset,
+    uint32_t size
+) {
+	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
+	std::vector<uint8_t> values(size);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
+	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, size, (GLvoid*)values.data());
+
+	return values;
+}
+
+UniformBufferHandle RendererOpenGL::CreateUniformBuffer(const uint8_t* data, uint32_t size) {
+	UniformBufferOpenGL entry;
+	entry.size = size;
+	glGenBuffers(1, &entry.id);
+
+	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
+	glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
+
+	m_uniformBuffers.push_back(entry);
+	return UniformBufferHandle(m_uniformBuffers.size() - 1);
+}
+
+void RendererOpenGL::DestroyUniformBuffer(UniformBufferHandle handle) {
+	UniformBufferOpenGL& buffer = GetUniformBufferEntry(handle);
+	glDeleteBuffers(1, &buffer.id);
+	buffer.id = 0;
+	buffer.size = 0;
+}
+
+void RendererOpenGL::LoadUniformBuffer(
+    UniformBufferHandle handle,
+    const uint8_t* data,
+    uint32_t size
+) {
+	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
+	entry.size = size;
+
+	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
+	glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
+}
+
+void RendererOpenGL::LoadUniformBuffer(
+    MaterialHandle materialHandle,
+    const std::string& name,
+    const void* data,
+    size_t size
+) {
+	ShaderOpenGL& material = GetShaderEntry(materialHandle);
+	
+}
+
+// void RendererOpenGL::BindUniformBuffer(UniformBufferHandle handle, uint32_t index) {
+// 	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
+
+// 	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
+// 	glBindBufferBase(GL_UNIFORM_BUFFER, index, entry.id);
+// }
+
+MaterialHandle RendererOpenGL::CreateMaterial(const Material* materialInfo) {
+	ShaderOpenGL shaderEntry =
+	    CompileShaderOpenGL(materialInfo->vertexShaderSource, materialInfo->fragmentShaderSource);
+	m_shaders.push_back(shaderEntry);
+	return MaterialHandle(m_shaders.size() - 1);
+}
+
+void RendererOpenGL::DestroyMaterial(MaterialHandle handle) {
+	ShaderOpenGL& shader = GetShaderEntry(handle);
+	glDeleteProgram(shader.id);
+	shader.id = 0;
+}
+
+ComputeProgramHandle RendererOpenGL::CreateComputeProgram(const char* source) {
+	ComputeShaderOpenGL computeShaderEntry = CompileComputeShaderOpenGL(source);
+	m_computeShaders.push_back(computeShaderEntry);
+	return ComputeProgramHandle(m_computeShaders.size() - 1);
+}
+
+void RendererOpenGL::DestroyComputeProgram(ComputeProgramHandle handle) {
+	ComputeShaderOpenGL computeProgram = GetComputeShaderEntry(handle);
+	glDeleteProgram(computeProgram.id);
+	computeProgram.id = 0;
+}
+
+void RendererOpenGL::DispatchComputeProgram(
+    ComputeProgramHandle handle,
+    int32_t x,
+    int32_t y,
+    int32_t z
+) {
+	ComputeShaderOpenGL computeShaderEntry = GetComputeShaderEntry(handle);
+	glUseProgram(computeShaderEntry.id);
+	glDispatchCompute(x, y, z);
+	glUseProgram(0);
+}
+
+void RendererOpenGL::SetViewport(glm::ivec2 start, glm::ivec2 resolution) {
+	glViewport(start.x, start.y, resolution.x, resolution.y);
+}
+
+void RendererOpenGL::WaitIdle() {
+	glFinish();
 }
 
 void RendererOpenGL::MemoryBarriersAll() {
