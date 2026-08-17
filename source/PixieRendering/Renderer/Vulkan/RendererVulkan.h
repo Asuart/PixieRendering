@@ -42,8 +42,7 @@ class RendererVulkan : public IRenderer {
 	void BindFrameBuffer(FrameBufferHandle handle);
 	void UnbindFrameBuffer();
 
-	TextureHandle
-	CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format);
+	TextureHandle CreateTexture(const uint8_t* data, glm::ivec2 resolution, TextureFormat format);
 	void DestroyTexture(TextureHandle handle);
 	void LoadTexture(
 	    TextureHandle handle,
@@ -242,7 +241,25 @@ class RendererVulkan : public IRenderer {
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
-	VkPipeline CreatePipeline(const Material* materialInfo);
+	void CreateMaterialDescriptorSetLayout(
+	    const std::vector<ShaderBinding>& bindings,
+	    VkDescriptorSetLayout& outDescriptorSetLayout
+	);
+	void CreateMaterialDescriptorPool(
+	    const std::vector<ShaderBinding>& bindings,
+	    VkDescriptorPool& outDescriptorPool
+	);
+	void CreateMaterialPipelineLayout(
+	    VkDescriptorSetLayout descriptorSetLayout,
+	    VkPipelineLayout& outPipelineLayout
+	);
+	void CreateMaterialPipeline(
+	    VkPipelineLayout pipelineLayout,
+        VkRenderPass renderPass,
+	    const VkPipelineShaderStageCreateInfo* shaderStages,
+	    uint32_t shaderStagesCount,
+	    VkPipeline& outPipeline
+	);
 
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);

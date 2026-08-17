@@ -87,8 +87,8 @@ void RendererVulkan::StartFrame() {
 
 void RendererVulkan::EndFrame() {
 	for (const RenderRequest& request : m_renderRequests) {
-		const MeshVulkan& mesh = GetMeshEntry(request.meshHandle);
-		const MaterialVulkan& material = GetMaterialEntry(request.materialHandle);
+		MeshVulkan& mesh = GetMeshEntry(request.meshHandle);
+		MaterialVulkan& material = GetMaterialEntry(request.materialHandle);
 
 		VkRenderPass currentRenderPass = (m_activeFrameBuffer.id != -1)
 		                                     ? GetFrameBufferEntry(m_activeFrameBuffer).renderPass
@@ -96,23 +96,15 @@ void RendererVulkan::EndFrame() {
 
 		auto it = material.pipelines.find(currentRenderPass);
 		if (it == material.pipelines.end()) {
-			VkPipeline pipeline = CreatePipeline();
-			// Создать новый pipeline для этого render pass
-			// Можно повторно использовать pipelineInfo, заменив renderPass
-			VkGraphicsPipelineCreateInfo newInfo = material.pipelineInfo;
-			newInfo.renderPass = currentRenderPass;
-			VkPipeline newPipeline;
-			if (vkCreateGraphicsPipelines(
-			        m_device,
-			        VK_NULL_HANDLE,
-			        1,
-			        &newInfo,
-			        nullptr,
-			        &newPipeline
-			    ) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create pipeline for custom render pass");
-			}
-			it = material.pipelines.emplace(currentRenderPass, newPipeline).first;
+			VkPipeline pipeline;
+			CreateMaterialPipeline(
+			    material.pipelineLayout,
+                currentRenderPass,
+			    material.shaderStagesCreateInfo.data(),
+			    static_cast<uint32_t>(material.shaderStagesCreateInfo.size()),
+			    pipeline
+			);
+			it = material.pipelines.emplace(currentRenderPass, pipeline).first;
 		}
 		vkCmdBindPipeline(
 		    m_commandBuffers[m_currentFrame],
@@ -823,7 +815,79 @@ void RendererVulkan::LoadUniformBuffer(
 	memcpy(res.bufferMapped, data, size);
 }
 
-VkPipeline RendererVulkan::CreatePipeline(const Material* materialInfo) {
+void RendererVulkan::CreateMaterialDescriptorSetLayout(
+    const std::vector<ShaderBinding>& bindings,
+    VkDescriptorSetLayout& outDescriptorSetLayout
+) {
+	std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+	for (const ShaderBinding& b : bindings) {
+		VkDescriptorSetLayoutBinding binding{};
+		binding.binding = b.binding;
+		binding.descriptorType = b.type;
+		binding.descriptorCount = b.count;
+		binding.stageFlags = b.stageFlags;
+		layoutBindings.push_back(binding);
+	}
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{};
+	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
+	layoutInfo.pBindings = layoutBindings.data();
+
+	if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &outDescriptorSetLayout) !=
+	    VK_SUCCESS) {
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
+}
+
+void RendererVulkan::CreateMaterialDescriptorPool(
+    const std::vector<ShaderBinding>& bindings,
+    VkDescriptorPool& outDescriptorPool
+) {
+	std::unordered_map<VkDescriptorType, uint32_t> poolSizeCounts;
+	for (const ShaderBinding& b : bindings) {
+		poolSizeCounts[b.type] += b.count * cMaxFramesInFlight;
+	}
+
+	std::vector<VkDescriptorPoolSize> poolSizes;
+	poolSizes.reserve(poolSizeCounts.size());
+	for (const auto& [type, count] : poolSizeCounts) {
+		poolSizes.push_back({ type, count });
+	}
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+	poolInfo.pPoolSizes = poolSizes.data();
+	poolInfo.maxSets = cMaxFramesInFlight;
+
+	if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &outDescriptorPool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create descriptor pool for material!");
+	}
+}
+
+void RendererVulkan::CreateMaterialPipelineLayout(
+    VkDescriptorSetLayout descriptorSetLayout,
+    VkPipelineLayout& outPipelineLayout
+) {
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+
+	if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &outPipelineLayout) !=
+	    VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+}
+
+void RendererVulkan::CreateMaterialPipeline(
+    VkPipelineLayout pipelineLayout,
+    VkRenderPass renderPass,
+    const VkPipelineShaderStageCreateInfo* shaderStages,
+    uint32_t shaderStagesCount,
+    VkPipeline& outPipeline
+) {
 	auto bindingDescriptions = GetMeshBindingDescriptions();
 	auto attributeDescriptions = GetMeshAttributeDescriptions();
 
@@ -892,11 +956,10 @@ VkPipeline RendererVulkan::CreatePipeline(const Material* materialInfo) {
 	dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
 	dynamicState.pDynamicStates = dynamicStates.data();
 
-
 	VkGraphicsPipelineCreateInfo pipelineInfo{};
 	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineInfo.stageCount = static_cast<uint32_t>(shader.stagesCreateInfo.size());
-	pipelineInfo.pStages = shader.stagesCreateInfo.data();
+	pipelineInfo.stageCount = shaderStagesCount;
+	pipelineInfo.pStages = shaderStages;
 	pipelineInfo.pVertexInputState = &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
 	pipelineInfo.pViewportState = &viewportState;
@@ -905,22 +968,24 @@ VkPipeline RendererVulkan::CreatePipeline(const Material* materialInfo) {
 	pipelineInfo.pDepthStencilState = &depthStencil;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
-	pipelineInfo.layout = material.pipelineLayout;
-	pipelineInfo.renderPass = m_renderPass;
+	pipelineInfo.layout = pipelineLayout;
+	pipelineInfo.renderPass = renderPass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-	VkPipeline pipeline;
-	if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) !=
-	    VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(
+	        m_device,
+	        VK_NULL_HANDLE,
+	        1,
+	        &pipelineInfo,
+	        nullptr,
+	        &outPipeline
+	    ) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
-
-	return pipeline;
 }
 
-MaterialHandle
-RendererVulkan::CreateMaterial(const Material* materialInfo) {
+MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
 	MaterialVulkan material;
 
 	CompiledShader shader = ShaderCompilerVulkan::CompileShader(
@@ -928,75 +993,32 @@ RendererVulkan::CreateMaterial(const Material* materialInfo) {
 	    materialInfo->vertexShaderSource,
 	    materialInfo->fragmentShaderSource
 	);
-	material.bindingsInfo = shader.bindingsInfo;
 
+	material.shaderStages = shader.stages;
+	material.shaderStagesCreateInfo = shader.stagesCreateInfo;
+	material.bindingsInfo = shader.bindingsInfo;
 	for (const auto& binding : shader.bindingsInfo.bindings) {
 		material.nameToBinding[binding.name] = binding.binding;
 	}
 
-	std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-	for (const ShaderBinding& b : shader.bindingsInfo.bindings) {
-		VkDescriptorSetLayoutBinding binding{};
-		binding.binding = b.binding;
-		binding.descriptorType = b.type;
-		binding.descriptorCount = b.count;
-		binding.stageFlags = b.stageFlags;
-		layoutBindings.push_back(binding);
-	}
+	CreateMaterialDescriptorSetLayout(material.bindingsInfo.bindings, material.descriptorSetLayout);
+	CreateMaterialPipelineLayout(material.descriptorSetLayout, material.pipelineLayout);
 
-	VkDescriptorSetLayoutCreateInfo layoutInfo{};
-	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
-	layoutInfo.pBindings = layoutBindings.data();
-
-	if (vkCreateDescriptorSetLayout(
-	        m_device,
-	        &layoutInfo,
-	        nullptr,
-	        &material.descriptorSetLayout
-	    ) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create descriptor set layout!");
-	}
-
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = 1;
-	pipelineLayoutInfo.pSetLayouts = &material.descriptorSetLayout;
-
-	if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &material.pipelineLayout) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to create pipeline layout!");
-	}
-
-
-
+	VkPipeline pipeline;
+	CreateMaterialPipeline(
+	    material.pipelineLayout,
+	    m_renderPass,
+	    shader.stagesCreateInfo.data(),
+	    static_cast<uint32_t>(shader.stagesCreateInfo.size()),
+	    pipeline
+	);
 	material.pipelines[m_renderPass] = pipeline;
 
 	for (size_t i = 0; i < shader.stages.size(); i++) {
 		vkDestroyShaderModule(m_device, shader.stages[i], nullptr);
 	}
 
-	std::unordered_map<VkDescriptorType, uint32_t> poolSizeCounts;
-	for (const ShaderBinding& b : shader.bindingsInfo.bindings) {
-		poolSizeCounts[b.type] += b.count * cMaxFramesInFlight;
-	}
-
-	std::vector<VkDescriptorPoolSize> poolSizes;
-	poolSizes.reserve(poolSizeCounts.size());
-	for (const auto& [type, count] : poolSizeCounts) {
-		poolSizes.push_back({ type, count });
-	}
-
-	VkDescriptorPoolCreateInfo poolInfo{};
-	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-	poolInfo.pPoolSizes = poolSizes.data();
-	poolInfo.maxSets = cMaxFramesInFlight;
-
-	if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &material.descriptorPool) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to create descriptor pool for material!");
-	}
+	CreateMaterialDescriptorPool(material.bindingsInfo.bindings, material.descriptorPool);
 
 	material.descriptorSets.resize(cMaxFramesInFlight);
 	for (uint32_t i = 0; i < cMaxFramesInFlight; i++) {
@@ -1067,6 +1089,7 @@ RendererVulkan::CreateMaterial(const Material* materialInfo) {
 	}
 
 	m_materials.push_back(std::move(material));
+
 	return MaterialHandle(static_cast<uint32_t>(m_materials.size() - 1));
 }
 
@@ -1090,7 +1113,11 @@ void RendererVulkan::DestroyMaterial(MaterialHandle handle) {
 		material.descriptorPool = VK_NULL_HANDLE;
 	}
 
-	vkDestroyPipeline(m_device, material.pipeline, nullptr);
+	for (auto& entry : material.pipelines) {
+		vkDestroyPipeline(m_device, entry.second, nullptr);
+	}
+	material.pipelines.clear();
+
 	vkDestroyPipelineLayout(m_device, material.pipelineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, material.descriptorSetLayout, nullptr);
 }

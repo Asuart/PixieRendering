@@ -19,7 +19,7 @@ target_link_libraries(PixieRendering PRIVATE glslang)
 target_link_libraries(PixieRendering PRIVATE glslang-default-resource-limits)
 target_link_libraries(PixieRendering PRIVATE Vulkan::Vulkan)
 
-if(MSVC)
+if(WIN32)
     target_link_libraries(PixieRendering PRIVATE 
         debug "$ENV{VULKAN_SDK}/Lib/spirv-cross-cored.lib"
         optimized "$ENV{VULKAN_SDK}/Lib/spirv-cross-core.lib"

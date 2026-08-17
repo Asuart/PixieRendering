@@ -49,8 +49,8 @@ int32_t main(void) {
 
 	MeshHandle meshHandle = renderer->CreateMesh(&mesh);
 
-	MaterialHandle materialHandle =
-	    renderer->CreateMaterial(vertexShaderSource, fragmentShaderSource);
+	Material materialInfo{ vertexShaderSource, fragmentShaderSource };
+	MaterialHandle materialHandle = renderer->CreateMaterial(&materialInfo);
 
 	while (!window->GetShouldClose()) {
 		renderer->StartFrame();
