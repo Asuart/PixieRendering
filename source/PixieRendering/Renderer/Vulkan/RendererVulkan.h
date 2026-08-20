@@ -268,7 +268,7 @@ class RendererVulkan : public IRenderer {
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-	VkImageAspectFlags GetAspectMask(VkFormat format)ж
+	VkImageAspectFlags GetAspectMask(VkFormat format);
 
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
