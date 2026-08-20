@@ -377,6 +377,90 @@ void RendererVulkan::DestroyFrameBuffer(FrameBufferHandle handle) {
 }
 
 void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) {
+	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
+	if (fb.resolution == resolution) {
+		return;
+	}
+
+	WaitIdle();
+
+	if (fb.framebuffer != VK_NULL_HANDLE) {
+		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
+		fb.framebuffer = VK_NULL_HANDLE;
+	}
+
+	if (fb.colorImageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, fb.colorImageView, nullptr);
+		fb.colorImageView = VK_NULL_HANDLE;
+	}
+	if (fb.colorImage != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, fb.colorImage, nullptr);
+		fb.colorImage = VK_NULL_HANDLE;
+	}
+	if (fb.colorImageMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, fb.colorImageMemory, nullptr);
+		fb.colorImageMemory = VK_NULL_HANDLE;
+	}
+
+	if (fb.depthImageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, fb.depthImageView, nullptr);
+		fb.depthImageView = VK_NULL_HANDLE;
+	}
+	if (fb.depthImage != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, fb.depthImage, nullptr);
+		fb.depthImage = VK_NULL_HANDLE;
+	}
+	if (fb.depthImageMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, fb.depthImageMemory, nullptr);
+		fb.depthImageMemory = VK_NULL_HANDLE;
+	}
+
+	fb.resolution = resolution;
+
+	VkFormat colorFormat = m_swapChainImageFormat;
+	VkFormat depthFormat = FindDepthFormat();
+
+	CreateImage(
+	    resolution.x,
+	    resolution.y,
+	    1,
+	    VK_SAMPLE_COUNT_1_BIT,
+	    colorFormat,
+	    VK_IMAGE_TILING_OPTIMAL,
+	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	    fb.colorImage,
+	    fb.colorImageMemory
+	);
+	fb.colorImageView = CreateImageView(fb.colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+	CreateImage(
+	    resolution.x,
+	    resolution.y,
+	    1,
+	    VK_SAMPLE_COUNT_1_BIT,
+	    depthFormat,
+	    VK_IMAGE_TILING_OPTIMAL,
+	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	    fb.depthImage,
+	    fb.depthImageMemory
+	);
+	fb.depthImageView = CreateImageView(fb.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+
+	std::array<VkImageView, 2> attachments = { fb.colorImageView, fb.depthImageView };
+	VkFramebufferCreateInfo fbInfo{};
+	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	fbInfo.renderPass = fb.renderPass;
+	fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	fbInfo.pAttachments = attachments.data();
+	fbInfo.width = resolution.x;
+	fbInfo.height = resolution.y;
+	fbInfo.layers = 1;
+
+	if (vkCreateFramebuffer(m_device, &fbInfo, nullptr, &fb.framebuffer) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to recreate framebuffer during resize!");
+	}
 }
 
 void RendererVulkan::BindFrameBuffer(FrameBufferHandle handle) {
@@ -418,6 +502,8 @@ void RendererVulkan::DestroyTexture(TextureHandle handle) {
 void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	TextureVulkan& textureEntry = GetTextureEntry(handle);
 
+	textureEntry.format = ToVkFormat(image->format);
+
 	DestroyTexture(handle);
 
 	VkDeviceSize imageSize = image->resolution.x * image->resolution.y * 4;
@@ -449,7 +535,7 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	    image->resolution.y,
 	    textureEntry.mipLevels,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    ToVkFormat(image->format),
+	    textureEntry.format,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 	        VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -460,7 +546,7 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 
 	TransitionImageLayout(
 	    textureEntry.textureImage,
-	    VK_FORMAT_R8G8B8A8_SRGB,
+	    textureEntry.format,
 	    VK_IMAGE_LAYOUT_UNDEFINED,
 	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	    textureEntry.mipLevels
@@ -478,7 +564,7 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 
 	GenerateMipmaps(
 	    textureEntry.textureImage,
-	    VK_FORMAT_R8G8B8A8_SRGB,
+	    textureEntry.format,
 	    image->resolution.x,
 	    image->resolution.y,
 	    textureEntry.mipLevels
@@ -487,7 +573,7 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	// Image view
 	textureEntry.textureImageView = CreateImageView(
 	    textureEntry.textureImage,
-	    VK_FORMAT_R8G8B8A8_SRGB,
+	    textureEntry.format,
 	    VK_IMAGE_ASPECT_COLOR_BIT,
 	    textureEntry.mipLevels
 	);
@@ -604,7 +690,7 @@ void RendererVulkan::GenerateTextureMipmaps(TextureHandle handle) {
 	TextureVulkan& textureEntry = GetTextureEntry(handle);
 	GenerateMipmaps(
 	    textureEntry.textureImage,
-	    VK_FORMAT_R8G8B8A8_SRGB,
+	    textureEntry.format,
 	    textureEntry.width,
 	    textureEntry.height,
 	    textureEntry.mipLevels
@@ -620,7 +706,7 @@ void RendererVulkan::BindTexture(
     MaterialHandle materialHandle,
     const std::string& name,
     TextureHandle textureHandle,
-    uint64_t index
+    uint32_t index
 ) {
 	MaterialVulkan& material = GetMaterialEntry(materialHandle);
 
@@ -642,7 +728,7 @@ void RendererVulkan::BindTexture(
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write.dstSet = material.descriptorSets[frame];
 		write.dstBinding = binding;
-		write.dstArrayElement = 0;
+		write.dstArrayElement = index;
 		write.descriptorCount = 1;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &imageInfo;
@@ -657,7 +743,7 @@ void RendererVulkan::BindTexture(
     ComputeProgramHandle computeMaterialHandle,
     const std::string& name,
     TextureHandle textureHandle,
-    uint64_t index
+    uint32_t index
 ) {
 	ComputeProgramVulkan& prog = GetComputeProgramEntry(computeMaterialHandle);
 
@@ -679,7 +765,7 @@ void RendererVulkan::BindTexture(
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write.dstSet = prog.descriptorSets[frame];
 		write.dstBinding = binding;
-		write.dstArrayElement = 0;
+		write.dstArrayElement = index;
 		write.descriptorCount = 1;
 		write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		write.pImageInfo = &imageInfo;
@@ -729,13 +815,12 @@ void RendererVulkan::LoadShaderStorageBuffer(
     uint32_t size
 ) {
 	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-
 	LoadBuffer(buf.buffer, size, data);
 }
 
 uint32_t RendererVulkan::GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) {
 	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-	return buf.size;
+	return static_cast<uint32_t>(buf.size);
 }
 
 std::vector<uint8_t> RendererVulkan::GetShaderStorageBufferData(
@@ -857,7 +942,7 @@ void RendererVulkan::CreateMaterialDescriptorSetLayout(
 	for (const ShaderBinding& b : bindings) {
 		VkDescriptorSetLayoutBinding binding{};
 		binding.binding = b.binding;
-		binding.descriptorType = b.type;
+		binding.descriptorType = static_cast<VkDescriptorType>(b.type);
 		binding.descriptorCount = b.count;
 		binding.stageFlags = b.stageFlags;
 		layoutBindings.push_back(binding);
@@ -880,7 +965,7 @@ void RendererVulkan::CreateMaterialDescriptorPool(
 ) {
 	std::unordered_map<VkDescriptorType, uint32_t> poolSizeCounts;
 	for (const ShaderBinding& b : bindings) {
-		poolSizeCounts[b.type] += b.count * cMaxFramesInFlight;
+		poolSizeCounts[static_cast<VkDescriptorType>(b.type)] += b.count * cMaxFramesInFlight;
 	}
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
@@ -1071,11 +1156,11 @@ MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
 		if (b.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
 		    b.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
 			uint32_t binding = b.binding;
-			uint32_t blockSize = b.blockSize;
+			uint32_t blockSize = b.size;
 
-			std::vector<BufferResource> buffers(cMaxFramesInFlight);
+			std::vector<BufferResourceVulkan> buffers(cMaxFramesInFlight);
 			for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
-				BufferResource& res = buffers[frame];
+				BufferResourceVulkan& res = buffers[frame];
 				CreateBuffer(
 				    blockSize,
 				    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -1094,7 +1179,7 @@ MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
 		std::vector<VkWriteDescriptorSet> writes;
 
 		for (const auto& [binding, buffers] : material.uniformBuffers) {
-			const BufferResource& res = buffers[frame];
+			const BufferResourceVulkan& res = buffers[frame];
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = res.buffer;
 			bufferInfo.offset = 0;
@@ -1162,7 +1247,7 @@ ComputeProgramHandle RendererVulkan::CreateComputeProgram(const char* source) {
 	CompiledComputeShader compiled = ShaderCompilerVulkan::CompileComputeShader(m_device, source);
 	prog.bindingsInfo = compiled.bindingsInfo;
 
-	CreateMaterialDescriptorSetLayout(compiled.bindings, prog.descriptorSetLayout);
+	CreateMaterialDescriptorSetLayout(compiled.bindingsInfo.bindings, prog.descriptorSetLayout);
 
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -1170,7 +1255,7 @@ ComputeProgramHandle RendererVulkan::CreateComputeProgram(const char* source) {
 	pipelineLayoutInfo.pSetLayouts = &prog.descriptorSetLayout;
 	vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &prog.pipelineLayout);
 
-	CreateMaterialDescriptorPool(compiled.bindings, prog.descriptorPool);
+	CreateMaterialDescriptorPool(compiled.bindingsInfo.bindings, prog.descriptorPool);
 
 	prog.descriptorSets.resize(cMaxFramesInFlight);
 	for (uint32_t i = 0; i < cMaxFramesInFlight; i++) {
@@ -1226,23 +1311,23 @@ void RendererVulkan::DispatchComputeProgram(
     int32_t y,
     int32_t z
 ) {
-	// ComputeProgramVulkan& prog = GetComputeProgramEntry(handle);
-	// vkCmdBindPipeline(
-	//     m_commandBuffers[m_currentFrame],
-	//     VK_PIPELINE_BIND_POINT_COMPUTE,
-	//     prog.pipeline
-	//);
-	// vkCmdBindDescriptorSets(
-	//     m_commandBuffers[m_currentFrame],
-	//     VK_PIPELINE_BIND_POINT_COMPUTE,
-	//     prog.pipelineLayout,
-	//     0,
-	//     1,
-	//     &prog.descriptorSets[m_currentFrame],
-	//     0,
-	//     nullptr
-	//);
-	// vkCmdDispatch(m_commandBuffers[m_currentFrame], x, y, z);
+	ComputeProgramVulkan& prog = GetComputeProgramEntry(handle);
+	vkCmdBindPipeline(
+	    m_commandBuffers[m_currentFrame],
+	    VK_PIPELINE_BIND_POINT_COMPUTE,
+	    prog.pipeline
+	);
+	vkCmdBindDescriptorSets(
+	    m_commandBuffers[m_currentFrame],
+	    VK_PIPELINE_BIND_POINT_COMPUTE,
+	    prog.pipelineLayout,
+	    0,
+	    1,
+	    &prog.descriptorSets[m_currentFrame],
+	    0,
+	    nullptr
+	);
+	vkCmdDispatch(m_commandBuffers[m_currentFrame], x, y, z);
 }
 
 void RendererVulkan::SetViewport(glm::ivec2 start, glm::ivec2 resolution) {

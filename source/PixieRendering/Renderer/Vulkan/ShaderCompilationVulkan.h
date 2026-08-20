@@ -5,34 +5,9 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "../ShaderCompiler.h"
+
 namespace PixieRenderer {
-
-struct ShaderBinding {
-	uint32_t binding = UINT32_MAX;
-	uint32_t set = UINT32_MAX;
-	VkDescriptorType type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uint32_t count = UINT32_MAX;
-	uint32_t stageFlags = UINT32_MAX;
-	uint32_t blockSize = UINT32_MAX;
-	std::string name = "";
-
-	ShaderBinding() = default;
-
-	ShaderBinding(
-	    uint32_t _binding,
-	    uint32_t _set,
-	    VkDescriptorType _type,
-	    uint32_t _count,
-	    uint32_t _stageFlags,
-	    uint32_t _blockSize,
-	    const std::string& _name
-	);
-};
-
-struct BindingsInfo {
-	std::vector<ShaderBinding> bindings;
-	std::vector<uint32_t> uniformBufferBindings;
-};
 
 struct CompiledShader {
 	std::vector<VkShaderModule> stages;
@@ -43,33 +18,22 @@ struct CompiledShader {
 struct CompiledComputeShader {
 	VkShaderModule stage;
 	VkPipelineShaderStageCreateInfo stageCreateInfo;
-};
-
-struct SpirVBinary {
-	uint32_t* words;
-	int32_t size;
+	BindingsInfo bindingsInfo;
 };
 
 class ShaderCompilerVulkan {
   public:
-	static void Initialize();
-	static void Free();
-
 	static CompiledShader CompileShader(
 	    VkDevice device,
 	    const char* vertexShaderSource,
 	    const char* framgentShaderSource
 	);
-
 	static CompiledComputeShader CompileComputeShader(VkDevice device, const char* source);
 
   private:
-	static inline bool isInitialized = false;
-
+	static SpirVBinary CompileShaderToSPIRV(glslang_stage_t stage, const char* shaderSource);
 	static VkShaderModule CreateShaderModule(VkDevice device, SpirVBinary binary);
 	static BindingsInfo ReflectSPIRV(const SpirVBinary& binary);
-	static std::vector<ShaderBinding>
-	MergeBindings(const std::vector<ShaderBinding>& a, const std::vector<ShaderBinding>& b);
 };
 
 } // namespace PixieRenderer

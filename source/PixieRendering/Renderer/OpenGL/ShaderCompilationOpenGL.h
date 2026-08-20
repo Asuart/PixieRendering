@@ -1,17 +1,12 @@
 #pragma once
 #include <glad/glad.h>
 
+#include "MaterialOpenGL.h"
+#include "ComputeProgramOpenGL.h"
+
 namespace PixieRenderer {
 
-struct ShaderOpenGL {
-	GLuint id = 0;
-};
-
-struct ComputeShaderOpenGL {
-	GLuint id = 0;
-};
-
-ShaderOpenGL CompileShaderOpenGL(
+MaterialOpenGL CompileShaderOpenGL(
     const char* vertexShaderSource,
     const char* framgentShaderSource,
     const char* geometryShaderSource = nullptr

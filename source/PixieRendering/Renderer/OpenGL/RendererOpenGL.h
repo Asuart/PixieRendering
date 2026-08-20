@@ -53,13 +53,13 @@ class RendererOpenGL : public IRenderer {
 	    MaterialHandle materialHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	) override;
 	void BindTexture(
 	    ComputeProgramHandle computeProgramHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	) override;
 
 	ShaderStorageBufferHandle
@@ -108,7 +108,7 @@ class RendererOpenGL : public IRenderer {
 	std::vector<TextureOpenGL> m_textures;
 	std::vector<MeshOpenGL> m_meshes;
 	std::vector<FrameBufferOpenGL> m_frameBuffers;
-	std::vector<ShaderOpenGL> m_shaders;
+	std::vector<MaterialOpenGL> m_shaders;
 	std::vector<ComputeShaderOpenGL> m_computeShaders;
 	std::vector<ViewportStateOpenGL> m_viewportStates;
 	std::vector<ShaderStorageBufferOpenGL> m_shaderStorageBuffers;
@@ -117,7 +117,7 @@ class RendererOpenGL : public IRenderer {
 	TextureOpenGL& GetTextureEntry(TextureHandle handle);
 	MeshOpenGL& GetMeshEntry(MeshHandle handle);
 	FrameBufferOpenGL& GetFrameBufferEntry(FrameBufferHandle handle);
-	ShaderOpenGL& GetShaderEntry(MaterialHandle handle);
+	MaterialOpenGL& GetShaderEntry(MaterialHandle handle);
 	ComputeShaderOpenGL& GetComputeShaderEntry(ComputeProgramHandle handle);
 	ShaderStorageBufferOpenGL& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
 	UniformBufferOpenGL& GetUniformBufferEntry(UniformBufferHandle handle);

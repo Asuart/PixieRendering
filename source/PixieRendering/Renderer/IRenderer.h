@@ -61,13 +61,13 @@ class IRenderer {
 	    MaterialHandle materialHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	) = 0;
 	virtual void BindTexture(
 	    ComputeProgramHandle computeProgramHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	) = 0;
 
 	virtual ShaderStorageBufferHandle

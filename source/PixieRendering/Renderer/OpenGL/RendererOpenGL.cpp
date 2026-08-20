@@ -216,13 +216,28 @@ void RendererOpenGL::LoadMesh(MeshHandle handle, const Mesh* mesh) {
 }
 
 void RendererOpenGL::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) {
-	const ShaderOpenGL& shaderEntry = GetShaderEntry(materialHandle);
+	const MaterialOpenGL& shaderEntry = GetShaderEntry(materialHandle);
 	const MeshOpenGL& meshEntry = GetMeshEntry(meshHandle);
 	glUseProgram(shaderEntry.id);
 	glBindVertexArray(meshEntry.vertexArrayObject);
 	glDrawElements(GL_TRIANGLES, meshEntry.indexesCount, GL_UNSIGNED_INT, NULL);
 	glBindVertexArray(0);
 	glUseProgram(0);
+
+	// void RendererOpenGL::BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t
+	// index) {
+	// 	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
+
+	// 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
+	// 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, entry.id);
+	// }
+
+	// void RendererOpenGL::BindUniformBuffer(UniformBufferHandle handle, uint32_t index) {
+	// 	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
+
+	// 	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
+	// 	glBindBufferBase(GL_UNIFORM_BUFFER, index, entry.id);
+	// }
 }
 
 FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::ivec2 resolution) {
@@ -511,7 +526,7 @@ void RendererOpenGL::BindTexture(
     MaterialHandle materialHandle,
     const std::string& name,
     TextureHandle textureHandle,
-    uint64_t index
+    uint32_t index
 ) {
 	TextureOpenGL textureEntry = GetTextureEntry(textureHandle);
 	glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + index));
@@ -525,7 +540,7 @@ void RendererOpenGL::BindTexture(
     ComputeProgramHandle computeMaterialHandle,
     const std::string& name,
     TextureHandle textureHandle,
-    uint64_t index
+    uint32_t index
 ) {
 	TextureOpenGL textureEntry = GetTextureEntry(textureHandle);
 	glBindImageTexture(
@@ -573,13 +588,6 @@ void RendererOpenGL::LoadShaderStorageBuffer(
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
 }
-
-// void RendererOpenGL::BindShaderStorageBuffer(ShaderStorageBufferHandle handle, uint32_t index) {
-// 	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
-
-// 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, entry.id);
-// 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, entry.id);
-// }
 
 uint32_t RendererOpenGL::GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) {
 	ShaderStorageBufferOpenGL& entry = GetShaderStorageBufferEntry(handle);
@@ -637,26 +645,25 @@ void RendererOpenGL::LoadUniformBuffer(
     const void* data,
     size_t size
 ) {
-	ShaderOpenGL& material = GetShaderEntry(materialHandle);
-	
+	MaterialOpenGL& material = GetShaderEntry(materialHandle);
+	if (!material.nameToBindingMap.contains(name)) {
+		std::cout << "LoadUniformBuffer: shader doesn't have binding '" << name << "'\n";
+		return;
+	}
+	uint32_t binding = material.nameToBindingMap[name];
+	glBindBuffer(GL_UNIFORM_BUFFER, binding);
+	glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
 }
 
-// void RendererOpenGL::BindUniformBuffer(UniformBufferHandle handle, uint32_t index) {
-// 	UniformBufferOpenGL& entry = GetUniformBufferEntry(handle);
-
-// 	glBindBuffer(GL_UNIFORM_BUFFER, entry.id);
-// 	glBindBufferBase(GL_UNIFORM_BUFFER, index, entry.id);
-// }
-
 MaterialHandle RendererOpenGL::CreateMaterial(const Material* materialInfo) {
-	ShaderOpenGL shaderEntry =
+	MaterialOpenGL shaderEntry =
 	    CompileShaderOpenGL(materialInfo->vertexShaderSource, materialInfo->fragmentShaderSource);
 	m_shaders.push_back(shaderEntry);
 	return MaterialHandle(m_shaders.size() - 1);
 }
 
 void RendererOpenGL::DestroyMaterial(MaterialHandle handle) {
-	ShaderOpenGL& shader = GetShaderEntry(handle);
+	MaterialOpenGL& shader = GetShaderEntry(handle);
 	glDeleteProgram(shader.id);
 	shader.id = 0;
 }
@@ -724,7 +731,7 @@ FrameBufferOpenGL& RendererOpenGL::GetFrameBufferEntry(FrameBufferHandle handle)
 	return m_frameBuffers[handle.id];
 }
 
-ShaderOpenGL& RendererOpenGL::GetShaderEntry(MaterialHandle handle) {
+MaterialOpenGL& RendererOpenGL::GetShaderEntry(MaterialHandle handle) {
 	return m_shaders[handle.id];
 }
 

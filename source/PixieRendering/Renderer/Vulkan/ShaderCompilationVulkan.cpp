@@ -8,40 +8,9 @@
 
 namespace PixieRenderer {
 
-ShaderBinding::ShaderBinding(
-    uint32_t _binding,
-    uint32_t _set,
-    VkDescriptorType _type,
-    uint32_t _count,
-    uint32_t _stageFlags,
-    uint32_t _blockSize,
-    const std::string& _name
-)
-    : binding(_binding),
-      set(_set),
-      type(_type),
-      count(_count),
-      stageFlags(_stageFlags),
-      blockSize(_blockSize),
-      name(_name) {
-}
-
-void ShaderCompilerVulkan::Initialize() {
-	if (!isInitialized) {
-		glslang_initialize_process();
-		isInitialized = true;
-	}
-}
-
-void ShaderCompilerVulkan::Free() {
-	if (isInitialized) {
-		glslang_finalize_process();
-		isInitialized = false;
-	}
-}
-
-SpirVBinary CompileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource) {
-	const glslang_input_t input = {
+SpirVBinary
+ShaderCompilerVulkan::CompileShaderToSPIRV(glslang_stage_t stage, const char* shaderSource) {
+	glslang_input_t glslangShaderCreateInfo = {
 		.language = GLSLANG_SOURCE_GLSL,
 		.stage = stage,
 		.client = GLSLANG_CLIENT_VULKAN,
@@ -57,23 +26,23 @@ SpirVBinary CompileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shade
 		.resource = glslang_default_resource(),
 	};
 
-	glslang_shader_t* shader = glslang_shader_create(&input);
+	glslang_shader_t* shader = glslang_shader_create(&glslangShaderCreateInfo);
 
 	SpirVBinary bin = {
 		.words = NULL,
 		.size = 0,
 	};
 
-	if (!glslang_shader_preprocess(shader, &input)) {
+	if (!glslang_shader_preprocess(shader, &glslangShaderCreateInfo)) {
 		printf("GLSL preprocessing failed.\n");
 		printf("%s\n", glslang_shader_get_info_log(shader));
 		printf("%s\n", glslang_shader_get_info_debug_log(shader));
-		printf("%s\n", input.code);
+		printf("%s\n", glslangShaderCreateInfo.code);
 		glslang_shader_delete(shader);
 		return bin;
 	}
 
-	if (!glslang_shader_parse(shader, &input)) {
+	if (!glslang_shader_parse(shader, &glslangShaderCreateInfo)) {
 		printf("GLSL parsing failed\n");
 		printf("%s\n", glslang_shader_get_info_log(shader));
 		printf("%s\n", glslang_shader_get_info_debug_log(shader));
@@ -130,23 +99,20 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
     const char* vertexShaderSource,
     const char* fragmentShaderSource
 ) {
-
-	SpirVBinary vertexBinary =
-	    CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_VERTEX, vertexShaderSource);
-	SpirVBinary fragmentBinary =
-	    CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_FRAGMENT, fragmentShaderSource);
+	SpirVBinary vertexBinary = CompileShaderToSPIRV(GLSLANG_STAGE_VERTEX, vertexShaderSource);
+	SpirVBinary fragmentBinary = CompileShaderToSPIRV(GLSLANG_STAGE_FRAGMENT, fragmentShaderSource);
 
 	BindingsInfo vertexInfo = ReflectSPIRV(vertexBinary);
 	BindingsInfo fragmentInfo = ReflectSPIRV(fragmentBinary);
 
 	std::vector<ShaderBinding> mergedBindings =
-	    MergeBindings(vertexInfo.bindings, fragmentInfo.bindings);
+	    ShaderCompiler::MergeBindings(vertexInfo.bindings, fragmentInfo.bindings);
 
 	BindingsInfo finalInfo;
 	finalInfo.bindings = std::move(mergedBindings);
 	for (const auto& binding : finalInfo.bindings) {
-		if (binding.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-		    binding.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+		if (static_cast<uint32_t>(binding.type) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+		    static_cast<uint32_t>(binding.type) == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
 			finalInfo.uniformBufferBindings.push_back(binding.binding);
 		}
 	}
@@ -176,7 +142,7 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
 
 CompiledComputeShader
 ShaderCompilerVulkan::CompileComputeShader(VkDevice device, const char* source) {
-	SpirVBinary computeBinary = CompileShaderToSPIRV_Vulkan(GLSLANG_STAGE_COMPUTE, source);
+	SpirVBinary computeBinary = CompileShaderToSPIRV(GLSLANG_STAGE_COMPUTE, source);
 	VkShaderModule shaderModule = CreateShaderModule(device, computeBinary);
 	delete[] computeBinary.words;
 
@@ -186,41 +152,46 @@ ShaderCompilerVulkan::CompileComputeShader(VkDevice device, const char* source) 
 	vertShaderStageInfo.module = shaderModule;
 	vertShaderStageInfo.pName = "main";
 
-	return { shaderModule, vertShaderStageInfo };
+	BindingsInfo bindingInfo = ReflectSPIRV(computeBinary);
+
+	return { shaderModule, vertShaderStageInfo, bindingInfo };
 }
 
 BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 	BindingsInfo result;
 
-	spirv_cross::CompilerGLSL compiler(binary.words, binary.size);
-	spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+	spirv_cross::CompilerGLSL* compiler = new spirv_cross::CompilerGLSL(binary.words, binary.size);
+	spirv_cross::ShaderResources resources = compiler->get_shader_resources();
 
-	auto add_bindings =
-	    [&](const auto& resource_list, VkDescriptorType type, VkShaderStageFlagBits stage) {
-		    std::vector<uint32_t> bindingIndexes{};
+	auto add_bindings = [&](const auto& resource_list,
+	                        VkDescriptorType type,
+	                        VkShaderStageFlagBits stage) {
+		std::vector<uint32_t> bindingIndexes{};
 
-		    for (const auto& res : resource_list) {
-			    const auto& binding = compiler.get_decoration(res.id, spv::DecorationBinding);
-			    bindingIndexes.push_back(binding);
+		for (const auto& res : resource_list) {
+			const auto& binding = compiler->get_decoration(res.id, spv::DecorationBinding);
+			bindingIndexes.push_back(binding);
 
-			    const auto& set = compiler.get_decoration(res.id, spv::DecorationDescriptorSet);
-			    uint32_t setIndex = (set != 0) ? set : 0;
+			const auto& set = compiler->get_decoration(res.id, spv::DecorationDescriptorSet);
+			uint32_t setIndex = (set != 0) ? set : 0;
 
-			    auto type_id = compiler.get_type(res.type_id);
-			    size_t blockSize = compiler.get_declared_struct_size(type_id);
+			auto type_id = compiler->get_type(res.type_id);
+			uint32_t blockSize = static_cast<uint32_t>(compiler->get_declared_struct_size(type_id));
 
-			    uint32_t count = 1;
-			    if (type_id.array.size() > 0) {
-				    count = type_id.array[0];
-			    }
+			uint32_t count = 1;
+			if (type_id.array.size() > 0) {
+				count = type_id.array[0];
+			}
 
-			    result.bindings.push_back(
-			        ShaderBinding(binding, setIndex, type, count, stage, blockSize, res.name)
-			    );
-		    }
+			result.bindings.push_back(
+			    ShaderBinding(res.name, type, binding, setIndex, blockSize, count, stage)
+			);
+		}
 
-		    return bindingIndexes;
-	    };
+		delete compiler;
+
+		return bindingIndexes;
+	};
 
 	result.uniformBufferBindings = add_bindings(
 	    resources.uniform_buffers,
@@ -235,58 +206,6 @@ BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 	);
 	add_bindings(resources.separate_images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_ALL);
 	add_bindings(resources.separate_samplers, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_ALL);
-
-	return result;
-}
-
-std::vector<ShaderBinding> ShaderCompilerVulkan::MergeBindings(
-    const std::vector<ShaderBinding>& a,
-    const std::vector<ShaderBinding>& b
-) {
-	std::unordered_map<uint64_t, ShaderBinding> map;
-
-	auto add = [&](const ShaderBinding& src) {
-		uint64_t key = (static_cast<uint64_t>(src.set) << 32) | src.binding;
-		auto it = map.find(key);
-		if (it == map.end()) {
-			map[key] = src;
-		} else {
-			if (it->second.type != src.type) {
-				throw std::runtime_error(
-				    "Binding type mismatch for set " + std::to_string(src.set) + " binding " +
-				    std::to_string(src.binding)
-				);
-			}
-			if (it->second.count != src.count) {
-				throw std::runtime_error(
-				    "Binding count mismatch for set " + std::to_string(src.set) + " binding " +
-				    std::to_string(src.binding)
-				);
-			}
-			if (it->second.blockSize != src.blockSize) {
-				throw std::runtime_error(
-				    "Block size mismatch for set " + std::to_string(src.set) + " binding " +
-				    std::to_string(src.binding)
-				);
-			}
-			it->second.stageFlags |= src.stageFlags;
-		}
-	};
-
-	for (const auto& s : a)
-		add(s);
-	for (const auto& s : b)
-		add(s);
-
-	std::vector<ShaderBinding> result;
-	result.reserve(map.size());
-	for (auto& [key, binding] : map) {
-		result.push_back(binding);
-	}
-
-	std::sort(result.begin(), result.end(), [](const ShaderBinding& lhs, const ShaderBinding& rhs) {
-		return lhs.binding < rhs.binding;
-	});
 
 	return result;
 }

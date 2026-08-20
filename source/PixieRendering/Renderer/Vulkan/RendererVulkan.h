@@ -51,13 +51,13 @@ class RendererVulkan : public IRenderer {
 	    MaterialHandle materialHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	);
 	void BindTexture(
 	    ComputeProgramHandle computeProgramHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
-	    uint64_t index
+	    uint32_t index
 	);
 
 	ShaderStorageBufferHandle CreateShaderStorageBuffer(const uint8_t* data, uint32_t size);
@@ -268,6 +268,7 @@ class RendererVulkan : public IRenderer {
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
+	VkImageAspectFlags GetAspectMask(VkFormat format)ж
 
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);

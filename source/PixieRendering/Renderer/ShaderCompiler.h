@@ -1,22 +1,16 @@
-#pragma once 
+#pragma once
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace PixieRenderer {
+#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Public/resource_limits_c.h>
 
-enum class ShaderResourceType : uint8_t {
-	Undefined,
-	Attribute,    
-	Uniform,      
-	UniformBuffer, 
-	Sampler2D,      
-	StorageBuffer,
-};
+namespace PixieRenderer {
 
 struct ShaderBinding {
 	std::string name = "";
-	ShaderResourceType type = ShaderResourceType::Undefined;
+	uint32_t type = UINT32_MAX;
 	uint32_t binding = UINT32_MAX;
 	uint32_t set = UINT32_MAX;
 	uint32_t size = UINT32_MAX;
@@ -27,7 +21,7 @@ struct ShaderBinding {
 
 	ShaderBinding(
 	    const std::string& _name,
-		ShaderResourceType _type,
+	    uint32_t _type,
 	    uint32_t _binding,
 	    uint32_t _set,
 	    uint32_t _size,
@@ -47,8 +41,15 @@ struct BindingsInfo {
 };
 
 class ShaderCompiler {
-  public:
+	static inline bool s_isInitialized = false;
 
+  public:
+	static void Initialize();
+	static void Free();
+	static bool IsInitialized();
+
+	static std::vector<ShaderBinding>
+	MergeBindings(const std::vector<ShaderBinding>& a, const std::vector<ShaderBinding>& b);
 };
 
 } // namespace PixieRenderer

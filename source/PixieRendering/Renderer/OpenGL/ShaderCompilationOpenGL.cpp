@@ -6,7 +6,7 @@
 
 namespace PixieRenderer {
 
-ShaderOpenGL CompileShaderOpenGL(
+MaterialOpenGL CompileShaderOpenGL(
     const char* vertexShaderSource,
     const char* framgentShaderSource,
     const char* geometryShaderSource
@@ -73,7 +73,7 @@ ShaderOpenGL CompileShaderOpenGL(
 	glDeleteShader(vertShader);
 	glDeleteShader(fragShader);
 
-	return ShaderOpenGL(program);
+	return MaterialOpenGL(program);
 }
 
 ComputeShaderOpenGL CompileComputeShaderOpenGL(const char* computeShaderSource) {

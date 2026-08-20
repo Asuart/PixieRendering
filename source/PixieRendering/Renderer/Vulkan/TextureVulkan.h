@@ -15,6 +15,7 @@ struct TextureVulkan {
 	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
 	VkImageView textureImageView = VK_NULL_HANDLE;
 	VkSampler textureSampler = VK_NULL_HANDLE;
+	VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFilter minFilter = VK_FILTER_LINEAR;
 	VkFilter magFilter = VK_FILTER_LINEAR;
 	VkSamplerAddressMode addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
