@@ -670,13 +670,6 @@ void RendererVulkan::CreateColorResources() {
 	    m_colorImageMemory
 	);
 	m_colorImageView = CreateImageView(m_colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-	TransitionImageLayout(
-	    m_colorImage,
-	    colorFormat,
-	    VK_IMAGE_LAYOUT_UNDEFINED,
-	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	    1
-	);
 }
 
 void RendererVulkan::CreateDepthResources() {

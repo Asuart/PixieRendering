@@ -66,7 +66,7 @@ ShaderCompilerVulkan::CompileShaderToSPIRV(glslang_stage_t stage, const char* sh
 	glslang_program_SPIRV_generate(program, stage);
 
 	bin.size = static_cast<int32_t>(glslang_program_SPIRV_get_size(program));
-	bin.words = new uint32_t(bin.size);
+	bin.words = new uint32_t[bin.size];
 	glslang_program_SPIRV_get(program, bin.words);
 
 	const char* spirv_messages = glslang_program_SPIRV_get_messages(program);
@@ -99,6 +99,10 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
     const char* vertexShaderSource,
     const char* fragmentShaderSource
 ) {
+	if (!ShaderCompiler::IsInitialized()) {
+		ShaderCompiler::Initialize();
+	}
+	
 	SpirVBinary vertexBinary = CompileShaderToSPIRV(GLSLANG_STAGE_VERTEX, vertexShaderSource);
 	SpirVBinary fragmentBinary = CompileShaderToSPIRV(GLSLANG_STAGE_FRAGMENT, fragmentShaderSource);
 
@@ -142,6 +146,10 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
 
 CompiledComputeShader
 ShaderCompilerVulkan::CompileComputeShader(VkDevice device, const char* source) {
+	if (!ShaderCompiler::IsInitialized()) {
+		ShaderCompiler::Initialize();
+	}
+
 	SpirVBinary computeBinary = CompileShaderToSPIRV(GLSLANG_STAGE_COMPUTE, source);
 	VkShaderModule shaderModule = CreateShaderModule(device, computeBinary);
 	delete[] computeBinary.words;
@@ -188,8 +196,6 @@ BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 			);
 		}
 
-		delete compiler;
-
 		return bindingIndexes;
 	};
 
@@ -206,6 +212,8 @@ BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 	);
 	add_bindings(resources.separate_images, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_ALL);
 	add_bindings(resources.separate_samplers, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_ALL);
+
+	delete compiler;
 
 	return result;
 }

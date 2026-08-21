@@ -27,11 +27,13 @@ ShaderBinding::ShaderBinding(
 void ShaderCompiler::Initialize() {
 	if (!s_isInitialized) {
 		glslang_initialize_process();
+		s_isInitialized = true;
 	}
 }
 
 void ShaderCompiler::Free() {
 	if (s_isInitialized) {
+		s_isInitialized = false;
 		glslang_finalize_process();
 	}
 }
