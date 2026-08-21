@@ -61,7 +61,6 @@ int32_t main(int argc, char** argv) {
 	glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
 	Camera camera;
 	camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
-	camera.projection = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 100.0f);
 
 	// Mesh mesh;
 	// mesh.vertexes = {
@@ -80,6 +79,13 @@ int32_t main(int argc, char** argv) {
 	while (!window->GetShouldClose()) {
 		renderer->StartFrame();
 
+		float aspect = static_cast<float>(window->GetResolution().x) / window->GetResolution().y;
+		camera.projection = glm::perspective(
+		    glm::radians(45.0f),
+		    aspect,
+		    0.1f,
+		    100.0f
+		);
 		renderer->LoadUniformBuffer(materialHandle, "CameraUBO", &camera, sizeof(Camera));
 		renderer->DrawMesh(meshHandle, materialHandle);
 

@@ -4,6 +4,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include "../Renderer/IRenderer.h"
+
 namespace PixieRenderer {
 
 Window::Window(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI)
@@ -16,6 +18,10 @@ Window::Window(const std::string& name, glm::ivec2 resolution, RenderAPI renderA
 
 Window::~Window() {
 	glfwTerminate();
+}
+
+void Window::SetRenderer(IRenderer* renderer) {
+	m_renderer = renderer;
 }
 
 glm::ivec2 Window::GetResolution() const {
@@ -51,6 +57,16 @@ void Window::SwapBuffers() {
 
 void Window::PollEvents() {
 	glfwPollEvents();
+}
+
+void Window::OnResize(glm::ivec2 newSize) {
+	if (m_resolution == newSize) {
+		return;
+	}
+	m_resolution = newSize;
+	if (m_renderer) {
+		m_renderer->SetRenderResolution(newSize.x, newSize.y);
+	}
 }
 
 } // namespace PixieRenderer

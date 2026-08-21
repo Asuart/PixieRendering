@@ -4,6 +4,18 @@
 
 namespace PixieRenderer {
 
+void RendererVulkan::SetRenderResolution(uint32_t width, uint32_t height) {
+	if (m_surfaceWidth == width && m_surfaceHeight == height) {
+		return;
+	}
+	m_surfaceWidth = width;
+	m_surfaceHeight = height;
+	
+	SetViewport({ 0, 0 }, { width, height });
+	
+	RecreateSwapChain();
+}
+
 void RendererVulkan::StartFrame() {
 	vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 

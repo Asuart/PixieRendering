@@ -10,6 +10,14 @@ WindowVulkan::WindowVulkan(const std::string& name, glm::ivec2 resolution)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	m_window = glfwCreateWindow(resolution.x, resolution.y, "Vulkan Window", nullptr, nullptr);
+
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetWindowSizeCallback(m_window, [](GLFWwindow* window, int width, int height) {
+		Window* wnd = static_cast<Window*>(glfwGetWindowUserPointer(window));
+		if (wnd) {
+			wnd->OnResize(glm::ivec2(width, height));
+		}
+	});
 }
 
 WindowVulkan::~WindowVulkan() {

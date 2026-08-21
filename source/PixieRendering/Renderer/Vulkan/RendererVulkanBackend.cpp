@@ -19,10 +19,11 @@ const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_N
 
 RendererVulkan::RendererVulkan(Window* window) : IRenderer(window, RenderAPI::Vulkan) {
 	InitVulkan();
-	m_renderWidth = window->GetResolution().x;
-	m_renderHeight = window->GetResolution().y;
+	m_surfaceWidth = window->GetResolution().x;
+	m_surfaceHeight = window->GetResolution().y;
 	m_viewportStart = { 0, 0 };
-	m_viewportResolution = { static_cast<int>(m_renderWidth), static_cast<int>(m_renderHeight) };
+
+	m_viewportResolution = { static_cast<int>(m_surfaceWidth), static_cast<int>(m_surfaceHeight) };
 }
 
 void RendererVulkan::InitVulkan() {
@@ -419,22 +420,17 @@ VkPresentModeKHR RendererVulkan::ChooseSwapPresentMode(const std::vector<VkPrese
 }
 
 VkExtent2D RendererVulkan::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
-	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-		return capabilities.currentExtent;
-	} else {
-		VkExtent2D actualExtent = { m_renderWidth, m_renderHeight };
-		actualExtent.width = std::clamp(
-		    actualExtent.width,
-		    capabilities.minImageExtent.width,
-		    capabilities.maxImageExtent.width
-		);
-		actualExtent.height = std::clamp(
-		    actualExtent.height,
-		    capabilities.minImageExtent.height,
-		    capabilities.maxImageExtent.height
-		);
-		return actualExtent;
-	}
+	VkExtent2D actualExtent = { .width = std::clamp(
+		                            m_surfaceWidth,
+		                            capabilities.minImageExtent.width,
+		                            capabilities.maxImageExtent.width
+		                        ),
+		                        .height = std::clamp(
+		                            m_surfaceHeight,
+		                            capabilities.minImageExtent.height,
+		                            capabilities.maxImageExtent.height
+		                        ) };
+	return actualExtent;
 }
 
 void RendererVulkan::CreateSwapchainImageViews() {

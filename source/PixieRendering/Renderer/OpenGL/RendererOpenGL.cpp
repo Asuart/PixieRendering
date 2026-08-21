@@ -23,6 +23,10 @@ RendererOpenGL::RendererOpenGL(Window* mainWindow) : IRenderer(mainWindow, Rende
 RendererOpenGL::~RendererOpenGL() {
 }
 
+void RendererOpenGL::SetRenderResolution(uint32_t width, uint32_t height) {
+	glViewport(0, 0, width, height);
+}
+
 void RendererOpenGL::StartFrame() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

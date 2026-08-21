@@ -22,6 +22,8 @@ class RendererVulkan : public IRenderer {
   public: // API
 	RendererVulkan(Window* window);
 
+	void SetRenderResolution(uint32_t width, uint32_t height);
+
 	void StartFrame();
 	void EndFrame();
 

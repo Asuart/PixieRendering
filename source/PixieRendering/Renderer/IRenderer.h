@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
+#include "../Window/Window.h"
+
 #include "PixieRendering/RenderAPI.h"
 #include "PixieRendering/ResourceHandles.h"
 #include "PixieRendering/Resources/Image2D.h"
@@ -15,6 +17,7 @@ class Window;
 class IRenderer {
   public:
 	IRenderer(Window* window, RenderAPI renderAPI) : m_window(window), m_renderAPI(renderAPI) {
+		window->SetRenderer(this);
 	}
 
 	virtual ~IRenderer() {};
@@ -26,6 +29,8 @@ class IRenderer {
 	RenderAPI GetRenderAPI() const {
 		return m_renderAPI;
 	}
+
+	virtual void SetRenderResolution(uint32_t width, uint32_t height) = 0;
 
 	virtual void StartFrame() = 0;
 	virtual void EndFrame() = 0;
@@ -116,8 +121,8 @@ class IRenderer {
   protected:
 	Window* m_window = nullptr;
 	RenderAPI m_renderAPI = RenderAPI::Undefined;
-	uint32_t m_renderWidth = 0;
-	uint32_t m_renderHeight = 0;
+	uint32_t m_surfaceWidth = 0;
+	uint32_t m_surfaceHeight = 0;
 	glm::ivec2 m_viewportStart = { 0, 0 };
 	glm::ivec2 m_viewportResolution = { 0, 0 };
 };
