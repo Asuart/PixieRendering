@@ -1,0 +1,31 @@
+{
+  "version": 9,
+  "configurePresets": [
+    {
+      "name": "gcc-base",
+      "displayName": "GCC Base Configuration",
+      "description": "Base settings for GCC compiler",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "environment": {
+        "PATH": "$env{GCC_PATH_BIN};$penv{PATH}"
+      }
+    },
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC Debug",
+      "description": "Debug build using GCC",
+      "inherits": "gcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "gcc-debug",
+      "configurePreset": "gcc-debug"
+    }
+  ]
+}

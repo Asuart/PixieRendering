@@ -42,4 +42,8 @@ void WindowVulkan::CreateSurface(VkInstance vkInstance, VkSurfaceKHR& vkSurface)
 	}
 }
 
+RendererVulkan* WindowVulkan::GetRendererVulkan() {
+	return reinterpret_cast<RendererVulkan*>(m_renderer);
+}
+
 } // namespace PixieRenderer

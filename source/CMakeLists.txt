@@ -1,2 +1,4 @@
 add_subdirectory(PixieRendering)
+add_subdirectory(PixieApplication)
+add_subdirectory(PixieUIApplication)
 add_subdirectory(Examples)

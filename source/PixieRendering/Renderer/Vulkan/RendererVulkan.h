@@ -96,6 +96,13 @@ class RendererVulkan : public IRenderer {
 	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle);
 	uint64_t GetInternalDepthAttachmentID(FrameBufferHandle handle);
 
+	VkInstance GetInstance() const;
+	VkPhysicalDevice GetPhysicalDevice() const;
+	VkDevice GetDevice() const;
+	VkQueue GetGraphicsQueue() const;
+	VkQueue GetPresentQueue() const;
+	VkCommandBuffer GetCommandBuffer() const;
+
   private: // API
 	// Resources
 	std::vector<MeshVulkan> m_meshes = {};

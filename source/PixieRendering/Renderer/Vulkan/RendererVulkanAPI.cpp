@@ -1386,6 +1386,30 @@ uint64_t RendererVulkan::GetInternalDepthAttachmentID(FrameBufferHandle handle) 
 	return reinterpret_cast<uint64_t>(fb.depthImage);
 }
 
+VkInstance RendererVulkan::GetInstance() const {
+	return m_instance;
+}
+
+VkPhysicalDevice RendererVulkan::GetPhysicalDevice() const {
+	return m_physicalDevice;
+}
+
+VkDevice RendererVulkan::GetDevice() const {
+	return m_device;
+}
+
+VkQueue RendererVulkan::GetGraphicsQueue() const {
+	return m_graphicsQueue;
+}
+
+VkQueue RendererVulkan::GetPresentQueue() const {
+	return m_presentQueue;
+}
+
+VkCommandBuffer RendererVulkan::GetCommandBuffer() const {
+	return m_commandBuffers[m_currentFrame];
+}
+
 TextureVulkan& RendererVulkan::GetTextureEntry(TextureHandle handle) {
 	return m_textures[handle.id];
 }

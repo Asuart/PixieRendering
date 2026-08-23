@@ -62,15 +62,6 @@ int32_t main(int argc, char** argv) {
 	Camera camera;
 	camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	// Mesh mesh;
-	// mesh.vertexes = {
-	//	{ glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
-	//	{ glm::vec3(-1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
-	//	{ glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
-	//	{ glm::vec3(1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
-	// };
-	// mesh.indexes = { 0, 1, 2, 0, 2, 3 };
-
 	MeshHandle meshHandle = renderer->CreateMesh(mesh);
 
 	Material materialInfo{ vertexShaderSource, fragmentShaderSource };
