@@ -11,10 +11,10 @@ struct TextureVulkan {
 	uint32_t width = 0;
 	uint32_t height = 0;
 	uint32_t mipLevels = 0;
-	VkImage textureImage = VK_NULL_HANDLE;
-	VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
-	VkImageView textureImageView = VK_NULL_HANDLE;
-	VkSampler textureSampler = VK_NULL_HANDLE;
+	VkImage image = VK_NULL_HANDLE;
+	VkDeviceMemory memory = VK_NULL_HANDLE;
+	VkImageView imageView = VK_NULL_HANDLE;
+	VkSampler sampler = VK_NULL_HANDLE;
 	VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 	VkFilter minFilter = VK_FILTER_LINEAR;
 	VkFilter magFilter = VK_FILTER_LINEAR;

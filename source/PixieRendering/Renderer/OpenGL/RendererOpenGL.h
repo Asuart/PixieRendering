@@ -29,9 +29,9 @@ class RendererOpenGL : public IRenderer {
 	void LoadMesh(MeshHandle handle, const Mesh* mesh) override;
 	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) override;
 
-	FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution) override;
+	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution) override;
 	void DestroyFrameBuffer(FrameBufferHandle handle) override;
-	void ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) override;
+	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
 	void BindFrameBuffer(FrameBufferHandle handle) override;
 	void UnbindFrameBuffer() override;
 
@@ -101,6 +101,9 @@ class RendererOpenGL : public IRenderer {
 
 	void WaitIdle() override;
 	void MemoryBarriersAll() override;
+
+	TextureHandle GetColorAttachmentHandle(FrameBufferHandle handle) override;
+	TextureHandle GetDepthAttachmentHandle(FrameBufferHandle handle) override;
 
 	uint64_t GetInternalID(TextureHandle handle) override;
 	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle) override;

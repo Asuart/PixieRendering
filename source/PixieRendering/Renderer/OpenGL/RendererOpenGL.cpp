@@ -244,7 +244,7 @@ void RendererOpenGL::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 	// }
 }
 
-FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::ivec2 resolution) {
+FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::uvec2 resolution) {
 	m_frameBuffers.push_back(FrameBufferOpenGL(resolution));
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
@@ -254,7 +254,7 @@ void RendererOpenGL::DestroyFrameBuffer(FrameBufferHandle handle) {
 	// TODO: destroy
 }
 
-void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) {
+void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
 	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
 	frameBufferEntry.Resize(resolution);
 }
@@ -706,6 +706,16 @@ void RendererOpenGL::WaitIdle() {
 
 void RendererOpenGL::MemoryBarriersAll() {
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+}
+
+TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) { 
+	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
+	return TextureHandle(fb.GetColorHandle());
+}
+
+TextureHandle RendererOpenGL::GetDepthAttachmentHandle(FrameBufferHandle handle) {
+	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
+	return TextureHandle(fb.GetDepthHandle());
 }
 
 uint64_t RendererOpenGL::GetInternalID(TextureHandle handle) {

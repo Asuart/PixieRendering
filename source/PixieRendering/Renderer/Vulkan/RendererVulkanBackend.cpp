@@ -431,20 +431,22 @@ VkExtent2D RendererVulkan::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capa
 void RendererVulkan::CreateSwapchainImageViews() {
 	m_swapChainImageViews.resize(m_swapChainImages.size());
 	for (uint32_t i = 0; i < m_swapChainImages.size(); i++) {
-		m_swapChainImageViews[i] = CreateImageView(
+		CreateImageView(
 		    m_swapChainImages[i],
 		    m_swapChainImageFormat,
 		    VK_IMAGE_ASPECT_COLOR_BIT,
-		    1
+		    1,
+		    m_swapChainImageViews[i]
 		);
 	}
 }
 
-VkImageView RendererVulkan::CreateImageView(
+void RendererVulkan::CreateImageView(
     VkImage image,
     VkFormat format,
     VkImageAspectFlags aspectFlags,
-    uint32_t mipLevels
+    uint32_t mipLevels,
+    VkImageView& outImageView
 ) {
 	VkImageViewCreateInfo viewInfo{};
 	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -457,12 +459,9 @@ VkImageView RendererVulkan::CreateImageView(
 	viewInfo.subresourceRange.baseArrayLayer = 0;
 	viewInfo.subresourceRange.layerCount = 1;
 
-	VkImageView imageView;
-	if (vkCreateImageView(m_device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+	if (vkCreateImageView(m_device, &viewInfo, nullptr, &outImageView) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create image view!");
 	}
-
-	return imageView;
 }
 
 void RendererVulkan::CreateRenderPass() {
@@ -660,7 +659,7 @@ void RendererVulkan::CreateColorResources() {
 	    m_colorImage,
 	    m_colorImageMemory
 	);
-	m_colorImageView = CreateImageView(m_colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	CreateImageView(m_colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1, m_colorImageView);
 }
 
 void RendererVulkan::CreateDepthResources() {
@@ -677,7 +676,7 @@ void RendererVulkan::CreateDepthResources() {
 	    m_depthImage,
 	    m_depthImageMemory
 	);
-	m_depthImageView = CreateImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	CreateImageView(m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, m_depthImageView);
 	TransitionImageLayout(
 	    m_depthImage,
 	    depthFormat,

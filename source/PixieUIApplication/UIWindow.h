@@ -9,6 +9,7 @@ public:
 	UIWindow(PixieRenderer::IRenderer* renderer) : m_renderer(renderer) {};
 	virtual ~UIWindow() {}
 
+	virtual void OnBeforeDraw() {}
 	virtual void Draw() = 0;
 	virtual void HandleEvent(const PixieRenderer::WindowEvent&) {};
 

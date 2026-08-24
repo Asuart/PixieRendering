@@ -34,15 +34,10 @@ void PixieApplication::Start() {
 
 		Time::Update();
 
-		m_renderer->StartFrame();
-
 		OnDrawFrame();
 		m_window->SwapBuffers();
 
-		m_renderer->EndFrame();
-
 		UserInput::Reset();
-
 		m_window->PollEvents();
 
 		//WindowEvent event;

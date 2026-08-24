@@ -11,6 +11,7 @@
 
 #include <PixieUIApplication/PixieUIApplication.h>
 #include <PixieUIApplication/Windows/DemoWindow.h>
+#include <PixieUIApplication/Windows/TextureDisplayWindow.h>
 
 #include "LoadScene.h"
 
@@ -51,37 +52,45 @@ void main()
 }
 )";
 
-
-class MyApp : public PixieApp::PixieUIApplication {
+class SimplaeSceneApp : public PixieApp::PixieUIApplication {
   public:
-	MyApp() : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
+	SimplaeSceneApp() : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
+		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 });
+
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
+		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(
+		    m_renderer,
+		    m_renderer->GetColorAttachmentHandle(m_frameBuffer)
+		));
 	}
+
+  private:
+	FrameBufferHandle m_frameBuffer;
 };
 
 int32_t main(int argc, char** argv) {
-	MyApp* app = new MyApp();
+	SimplaeSceneApp* app = new SimplaeSceneApp();
 	app->Start();
 
-	//std::filesystem::path appPath = std::filesystem::path(argv[0]);
-	//const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
+	// std::filesystem::path appPath = std::filesystem::path(argv[0]);
+	// const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
 
-	//Window* window = CreateWindow("Simple Scene", { 1280, 720 }, RenderAPI::Vulkan);
-	//IRenderer* renderer = CreateRenderer(window);
+	// Window* window = CreateWindow("Simple Scene", { 1280, 720 }, RenderAPI::Vulkan);
+	// IRenderer* renderer = CreateRenderer(window);
 
-	//Mesh* mesh = LoadMesh(filePath);
+	// Mesh* mesh = LoadMesh(filePath);
 
-	//glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
-	//glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
-	//Camera camera;
-	//camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
+	// glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
+	// glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
+	// Camera camera;
+	// camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	//MeshHandle meshHandle = renderer->CreateMesh(mesh);
+	// MeshHandle meshHandle = renderer->CreateMesh(mesh);
 
-	//Material materialInfo{ vertexShaderSource, fragmentShaderSource };
-	//MaterialHandle materialHandle = renderer->CreateMaterial(&materialInfo);
+	// Material materialInfo{ vertexShaderSource, fragmentShaderSource };
+	// MaterialHandle materialHandle = renderer->CreateMaterial(&materialInfo);
 
-	//while (!window->GetShouldClose()) {
+	// while (!window->GetShouldClose()) {
 	//	renderer->StartFrame();
 
 	//	float aspect = static_cast<float>(window->GetResolution().x) / window->GetResolution().y;
@@ -100,7 +109,7 @@ int32_t main(int argc, char** argv) {
 	//	window->PollEvents();
 	//}
 
-	//delete mesh;
+	// delete mesh;
 
 	delete app;
 

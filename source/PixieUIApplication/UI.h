@@ -18,6 +18,7 @@ class UI {
 	virtual void HandleEvent(const PixieRenderer::WindowEvent& event);
 	virtual void AddWindow(UIWindow* window);
 
+	void OnBeforeDrawFrame();
 	virtual void Draw() = 0;
 
   protected:

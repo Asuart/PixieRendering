@@ -32,9 +32,9 @@ class RendererVulkan : public IRenderer {
 	void LoadMesh(MeshHandle handle, const Mesh* mesh);
 	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle);
 
-	FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution);
+	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution);
 	void DestroyFrameBuffer(FrameBufferHandle handle);
-	void ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution);
+	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution);
 	void BindFrameBuffer(FrameBufferHandle handle);
 	void UnbindFrameBuffer();
 
@@ -91,6 +91,9 @@ class RendererVulkan : public IRenderer {
 
 	void WaitIdle();
 	void MemoryBarriersAll();
+
+	TextureHandle GetColorAttachmentHandle(FrameBufferHandle handle);
+	TextureHandle GetDepthAttachmentHandle(FrameBufferHandle handle);
 
 	uint64_t GetInternalID(TextureHandle handle);
 	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle);
@@ -207,11 +210,12 @@ class RendererVulkan : public IRenderer {
 	    VkImage& image,
 	    VkDeviceMemory& imageMemory
 	);
-	VkImageView CreateImageView(
+	void CreateImageView(
 	    VkImage image,
 	    VkFormat format,
 	    VkImageAspectFlags aspectFlags,
-	    uint32_t mipLevels
+	    uint32_t mipLevels,
+	    VkImageView& outImageView
 	);
 	void TransitionImageLayout(
 	    VkImage image,

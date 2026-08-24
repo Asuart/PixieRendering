@@ -12,6 +12,7 @@ class TextureDisplayWindow : public UIWindow {
 public:
 	TextureDisplayWindow(PixieRenderer::IRenderer* renderer, PixieRenderer::TextureHandle texture);
 
+	virtual void OnBeforeDraw() override;
 	void Draw() override;
 
 	void SetTexture(PixieRenderer::TextureHandle texture);
@@ -21,6 +22,7 @@ protected:
 	PixieRenderer::TextureHandle m_targetTexture;
 	PixieRenderer::MaterialHandle m_shader;
 	PixieRenderer::MeshHandle m_screenPlane;
+	glm::uvec2 m_viewportResolution;
 
     float Aspect(glm::ivec2 resolution);
 };

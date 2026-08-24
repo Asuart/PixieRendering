@@ -39,4 +39,10 @@ void UI::AddWindow(PixieUI::UIWindow* window) {
 	m_windows.push_back(window);
 }
 
+void UI::OnBeforeDrawFrame() {
+	for (PixieUI::UIWindow* window : m_windows) {
+		window->OnBeforeDraw();
+	}
+}
+
 } // namespace PixieUI

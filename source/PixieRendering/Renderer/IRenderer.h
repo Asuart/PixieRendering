@@ -40,9 +40,9 @@ class IRenderer {
 	virtual void LoadMesh(MeshHandle handle, const Mesh* mesh) = 0;
 	virtual void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) = 0;
 
-	virtual FrameBufferHandle CreateFrameBuffer(glm::ivec2 resolution) = 0;
+	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution) = 0;
 	virtual void DestroyFrameBuffer(FrameBufferHandle handle) = 0;
-	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) = 0;
+	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) = 0;
 	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
 	virtual void UnbindFrameBuffer() = 0;
 
@@ -113,6 +113,9 @@ class IRenderer {
 
 	virtual void WaitIdle() = 0;
 	virtual void MemoryBarriersAll() = 0;
+
+	virtual TextureHandle GetColorAttachmentHandle(FrameBufferHandle handle) = 0;
+	virtual TextureHandle GetDepthAttachmentHandle(FrameBufferHandle handle) = 0;
 
 	virtual uint64_t GetInternalID(TextureHandle handle) = 0;
 	virtual uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle) = 0;

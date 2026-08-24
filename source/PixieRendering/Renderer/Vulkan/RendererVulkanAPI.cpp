@@ -10,9 +10,9 @@ void RendererVulkan::SetRenderResolution(uint32_t width, uint32_t height) {
 	}
 	m_surfaceWidth = width;
 	m_surfaceHeight = height;
-	
+
 	SetViewport({ 0, 0 }, { width, height });
-	
+
 	RecreateSwapChain();
 }
 
@@ -54,7 +54,7 @@ void RendererVulkan::StartFrame() {
 		auto& fb = GetFrameBufferEntry(m_activeFrameBuffer);
 		renderPass = fb.renderPass;
 		framebuffer = fb.framebuffer;
-		extent = { static_cast<uint32_t>(fb.resolution.x), static_cast<uint32_t>(fb.resolution.y) };
+		extent = { fb.width, fb.height };
 	}
 
 	VkRenderPassBeginInfo renderPassInfo{};
@@ -277,43 +277,63 @@ void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 	m_renderRequests.push_back({ meshHandle, materialHandle });
 }
 
-FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::ivec2 resolution) {
+FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution) {
 	FrameBufferVulkan fb;
-	fb.resolution = resolution;
+	fb.width = resolution.x;
+	fb.height = resolution.y;
 
-	VkFormat colorFormat = m_swapChainImageFormat;
-	VkFormat depthFormat = FindDepthFormat();
+	TextureVulkan colorTexture;
+	colorTexture.width = resolution.x;
+	colorTexture.height = resolution.y;
+	colorTexture.format = m_swapChainImageFormat;
+
+	TextureVulkan depthTexture;
+	depthTexture.width = resolution.x;
+	depthTexture.height = resolution.y;
+	depthTexture.format = FindDepthFormat();
 
 	CreateImage(
 	    resolution.x,
 	    resolution.y,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    colorFormat,
+	    colorTexture.format,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    fb.colorImage,
-	    fb.colorImageMemory
+	    colorTexture.image,
+	    colorTexture.memory
 	);
-	fb.colorImageView = CreateImageView(fb.colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	CreateImageView(
+	    colorTexture.image,
+	    colorTexture.format,
+	    VK_IMAGE_ASPECT_COLOR_BIT,
+	    1,
+	    colorTexture.imageView
+	);
 
 	CreateImage(
 	    resolution.x,
 	    resolution.y,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    depthFormat,
+	    depthTexture.format,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    fb.depthImage,
-	    fb.depthImageMemory
+	    depthTexture.image,
+	    depthTexture.memory
 	);
-	fb.depthImageView = CreateImageView(fb.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	CreateImageView(
+	    depthTexture.image,
+	    depthTexture.format,
+	    VK_IMAGE_ASPECT_DEPTH_BIT,
+	    1,
+	    depthTexture.imageView
+	);
 
 	VkAttachmentDescription colorAttachment{};
-	colorAttachment.format = colorFormat;
+	colorAttachment.format = colorTexture.format;
 	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -323,7 +343,7 @@ FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::ivec2 resolution) {
 	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkAttachmentDescription depthAttachment{};
-	depthAttachment.format = depthFormat;
+	depthAttachment.format = depthTexture.format;
 	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -354,7 +374,7 @@ FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::ivec2 resolution) {
 		throw std::runtime_error("Failed to create render pass for framebuffer");
 	}
 
-	std::array<VkImageView, 2> fbAttachments = { fb.colorImageView, fb.depthImageView };
+	std::array<VkImageView, 2> fbAttachments = { colorTexture.imageView, depthTexture.imageView };
 	VkFramebufferCreateInfo fbInfo{};
 	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	fbInfo.renderPass = renderPass;
@@ -369,9 +389,13 @@ FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::ivec2 resolution) {
 	}
 
 	fb.renderPass = renderPass;
+	fb.colorTexture = TextureHandle(m_textures.size());
+	m_textures.push_back(colorTexture);
+	fb.depthTexture = TextureHandle(m_textures.size());
+	m_textures.push_back(depthTexture);
 
 	m_frameBuffers.push_back(fb);
-	return FrameBufferHandle(static_cast<uint32_t>(m_frameBuffers.size() - 1));
+	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
 
 void RendererVulkan::DestroyFrameBuffer(FrameBufferHandle handle) {
@@ -379,88 +403,103 @@ void RendererVulkan::DestroyFrameBuffer(FrameBufferHandle handle) {
 	if (fb.framebuffer != VK_NULL_HANDLE) {
 		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
 		vkDestroyRenderPass(m_device, fb.renderPass, nullptr);
-		vkDestroyImageView(m_device, fb.colorImageView, nullptr);
-		vkDestroyImage(m_device, fb.colorImage, nullptr);
-		vkFreeMemory(m_device, fb.colorImageMemory, nullptr);
-		vkDestroyImageView(m_device, fb.depthImageView, nullptr);
-		vkDestroyImage(m_device, fb.depthImage, nullptr);
-		vkFreeMemory(m_device, fb.depthImageMemory, nullptr);
+		DestroyTexture(fb.colorTexture);
+		DestroyTexture(fb.depthTexture);
 	}
 }
 
-void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::ivec2 resolution) {
+void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
 	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	if (fb.resolution == resolution) {
+	if (fb.width == resolution.x && fb.height == resolution.y) {
 		return;
 	}
 
 	WaitIdle();
+
+	TextureVulkan& colorTexture = GetTextureEntry(fb.colorTexture);
+	TextureVulkan& depthTexture = GetTextureEntry(fb.depthTexture);
 
 	if (fb.framebuffer != VK_NULL_HANDLE) {
 		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
 		fb.framebuffer = VK_NULL_HANDLE;
 	}
 
-	if (fb.colorImageView != VK_NULL_HANDLE) {
-		vkDestroyImageView(m_device, fb.colorImageView, nullptr);
-		fb.colorImageView = VK_NULL_HANDLE;
+	if (colorTexture.imageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, colorTexture.imageView, nullptr);
+		colorTexture.imageView = VK_NULL_HANDLE;
 	}
-	if (fb.colorImage != VK_NULL_HANDLE) {
-		vkDestroyImage(m_device, fb.colorImage, nullptr);
-		fb.colorImage = VK_NULL_HANDLE;
+	if (colorTexture.image != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, colorTexture.image, nullptr);
+		colorTexture.image = VK_NULL_HANDLE;
 	}
-	if (fb.colorImageMemory != VK_NULL_HANDLE) {
-		vkFreeMemory(m_device, fb.colorImageMemory, nullptr);
-		fb.colorImageMemory = VK_NULL_HANDLE;
-	}
-
-	if (fb.depthImageView != VK_NULL_HANDLE) {
-		vkDestroyImageView(m_device, fb.depthImageView, nullptr);
-		fb.depthImageView = VK_NULL_HANDLE;
-	}
-	if (fb.depthImage != VK_NULL_HANDLE) {
-		vkDestroyImage(m_device, fb.depthImage, nullptr);
-		fb.depthImage = VK_NULL_HANDLE;
-	}
-	if (fb.depthImageMemory != VK_NULL_HANDLE) {
-		vkFreeMemory(m_device, fb.depthImageMemory, nullptr);
-		fb.depthImageMemory = VK_NULL_HANDLE;
+	if (colorTexture.memory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, colorTexture.memory, nullptr);
+		colorTexture.memory = VK_NULL_HANDLE;
 	}
 
-	fb.resolution = resolution;
+	if (depthTexture.imageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, depthTexture.imageView, nullptr);
+		depthTexture.imageView = VK_NULL_HANDLE;
+	}
+	if (depthTexture.image != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, depthTexture.image, nullptr);
+		depthTexture.image = VK_NULL_HANDLE;
+	}
+	if (depthTexture.memory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, depthTexture.memory, nullptr);
+		depthTexture.memory = VK_NULL_HANDLE;
+	}
 
-	VkFormat colorFormat = m_swapChainImageFormat;
-	VkFormat depthFormat = FindDepthFormat();
+	fb.width = resolution.x;
+	fb.height = resolution.y;
+
+	colorTexture.width = resolution.x;
+	colorTexture.height = resolution.y;
+
+	depthTexture.width = resolution.x;
+	depthTexture.height = resolution.y;
 
 	CreateImage(
 	    resolution.x,
 	    resolution.y,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    colorFormat,
+	    colorTexture.format,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    fb.colorImage,
-	    fb.colorImageMemory
+	    colorTexture.image,
+	    colorTexture.memory
 	);
-	fb.colorImageView = CreateImageView(fb.colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	CreateImageView(
+	    colorTexture.image,
+	    colorTexture.format,
+	    VK_IMAGE_ASPECT_COLOR_BIT,
+	    1,
+	    colorTexture.imageView
+	);
 
 	CreateImage(
 	    resolution.x,
 	    resolution.y,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    depthFormat,
+	    depthTexture.format,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    fb.depthImage,
-	    fb.depthImageMemory
+	    depthTexture.image,
+	    depthTexture.memory
 	);
-	fb.depthImageView = CreateImageView(fb.depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	CreateImageView(
+	    depthTexture.image,
+	    depthTexture.format,
+	    VK_IMAGE_ASPECT_DEPTH_BIT,
+	    1,
+	    depthTexture.imageView
+	);
 
-	std::array<VkImageView, 2> attachments = { fb.colorImageView, fb.depthImageView };
+	std::array<VkImageView, 2> attachments = { colorTexture.imageView, depthTexture.imageView };
 	VkFramebufferCreateInfo fbInfo{};
 	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	fbInfo.renderPass = fb.renderPass;
@@ -496,18 +535,27 @@ TextureHandle RendererVulkan::CreateTexture(const Image2D* image) {
 
 void RendererVulkan::DestroyTexture(TextureHandle handle) {
 	TextureVulkan& texture = GetTextureEntry(handle);
-	if (texture.textureImage != VK_NULL_HANDLE) {
-		vkDestroySampler(m_device, texture.textureSampler, nullptr);
-		texture.textureSampler = VK_NULL_HANDLE;
+	texture.width = 0;
+	texture.height = 0;
 
-		vkDestroyImageView(m_device, texture.textureImageView, nullptr);
-		texture.textureImageView = VK_NULL_HANDLE;
+	if (texture.sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(m_device, texture.sampler, nullptr);
+		texture.sampler = VK_NULL_HANDLE;
+	}
 
-		vkDestroyImage(m_device, texture.textureImage, nullptr);
-		texture.textureImage = VK_NULL_HANDLE;
+	if (texture.imageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, texture.imageView, nullptr);
+		texture.imageView = VK_NULL_HANDLE;
+	}
 
-		vkFreeMemory(m_device, texture.textureImageMemory, nullptr);
-		texture.textureImageMemory = VK_NULL_HANDLE;
+	if (texture.image != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, texture.image, nullptr);
+		texture.image = VK_NULL_HANDLE;
+	}
+
+	if (texture.memory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, texture.memory, nullptr);
+		texture.memory = VK_NULL_HANDLE;
 	}
 }
 
@@ -552,30 +600,25 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 	        VK_IMAGE_USAGE_SAMPLED_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    textureEntry.textureImage,
-	    textureEntry.textureImageMemory
+	    textureEntry.image,
+	    textureEntry.memory
 	);
 
 	TransitionImageLayout(
-	    textureEntry.textureImage,
+	    textureEntry.image,
 	    textureEntry.format,
 	    VK_IMAGE_LAYOUT_UNDEFINED,
 	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	    textureEntry.mipLevels
 	);
 
-	CopyBufferToImage(
-	    stagingBuffer,
-	    textureEntry.textureImage,
-	    image->resolution.x,
-	    image->resolution.y
-	);
+	CopyBufferToImage(stagingBuffer, textureEntry.image, image->resolution.x, image->resolution.y);
 
 	vkDestroyBuffer(m_device, stagingBuffer, nullptr);
 	vkFreeMemory(m_device, stagingBufferMemory, nullptr);
 
 	GenerateMipmaps(
-	    textureEntry.textureImage,
+	    textureEntry.image,
 	    textureEntry.format,
 	    image->resolution.x,
 	    image->resolution.y,
@@ -583,11 +626,12 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	);
 
 	// Image view
-	textureEntry.textureImageView = CreateImageView(
-	    textureEntry.textureImage,
+	CreateImageView(
+	    textureEntry.image,
 	    textureEntry.format,
 	    VK_IMAGE_ASPECT_COLOR_BIT,
-	    textureEntry.mipLevels
+	    textureEntry.mipLevels,
+	    textureEntry.imageView
 	);
 
 	// Image sampler
@@ -612,8 +656,7 @@ void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 	samplerInfo.mipLodBias = 0.0f;
 
-	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.textureSampler) !=
-	    VK_SUCCESS) {
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create texture sampler!");
 	}
 }
@@ -628,7 +671,7 @@ void RendererVulkan::SetTextureFiltering(
 	textureEntry.minFilter = ToVkFilter(minFilter);
 	textureEntry.magFilter = ToVkFilter(magFilter);
 
-	vkDestroySampler(m_device, textureEntry.textureSampler, nullptr);
+	vkDestroySampler(m_device, textureEntry.sampler, nullptr);
 
 	VkPhysicalDeviceProperties properties{};
 	vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
@@ -651,8 +694,7 @@ void RendererVulkan::SetTextureFiltering(
 	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 	samplerInfo.mipLodBias = 0.0f;
 
-	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.textureSampler) !=
-	    VK_SUCCESS) {
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to recreate texture sampler!");
 	}
 }
@@ -669,7 +711,7 @@ void RendererVulkan::SetTextureWrap(
 	textureEntry.addressModeV = ToVkSamplerAddressMode(wrapV);
 	textureEntry.addressModeW = ToVkSamplerAddressMode(wrapW);
 
-	vkDestroySampler(m_device, textureEntry.textureSampler, nullptr);
+	vkDestroySampler(m_device, textureEntry.sampler, nullptr);
 
 	VkPhysicalDeviceProperties properties{};
 	vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
@@ -692,7 +734,7 @@ void RendererVulkan::SetTextureWrap(
 	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 	samplerInfo.mipLodBias = 0.0f;
 
-	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.textureSampler) !=
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.sampler) !=
 	    VK_SUCCESS) {
 		throw std::runtime_error("failed to recreate texture sampler!");
 	}
@@ -701,7 +743,7 @@ void RendererVulkan::SetTextureWrap(
 void RendererVulkan::GenerateTextureMipmaps(TextureHandle handle) {
 	TextureVulkan& textureEntry = GetTextureEntry(handle);
 	GenerateMipmaps(
-	    textureEntry.textureImage,
+	    textureEntry.image,
 	    textureEntry.format,
 	    textureEntry.width,
 	    textureEntry.height,
@@ -733,8 +775,8 @@ void RendererVulkan::BindTexture(
 	for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = tex.textureImageView;
-		imageInfo.sampler = tex.textureSampler;
+		imageInfo.imageView = tex.imageView;
+		imageInfo.sampler = tex.sampler;
 
 		VkWriteDescriptorSet write{};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -770,8 +812,8 @@ void RendererVulkan::BindTexture(
 	for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = tex.textureImageView;
-		imageInfo.sampler = tex.textureSampler;
+		imageInfo.imageView = tex.imageView;
+		imageInfo.sampler = tex.sampler;
 
 		VkWriteDescriptorSet write{};
 		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1145,9 +1187,9 @@ MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
 	);
 	material.pipelines[m_renderPass] = pipeline;
 
-	for (size_t i = 0; i < shader.stages.size(); i++) {
-		vkDestroyShaderModule(m_device, shader.stages[i], nullptr);
-	}
+	//for (size_t i = 0; i < shader.stages.size(); i++) {
+	//	vkDestroyShaderModule(m_device, shader.stages[i], nullptr);
+	//}
 
 	CreateMaterialDescriptorPool(material.bindingsInfo.bindings, material.descriptorPool);
 
@@ -1371,19 +1413,31 @@ void RendererVulkan::MemoryBarriersAll() {
 	);
 }
 
+TextureHandle RendererVulkan::GetColorAttachmentHandle(FrameBufferHandle handle) {
+	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
+	return fb.colorTexture;
+}
+
+TextureHandle RendererVulkan::GetDepthAttachmentHandle(FrameBufferHandle handle) {
+	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
+	return fb.depthTexture;
+}
+
 uint64_t RendererVulkan::GetInternalID(TextureHandle handle) {
 	TextureVulkan& textureEntry = GetTextureEntry(handle);
-	return reinterpret_cast<uint64_t>(textureEntry.textureImage);
+	return reinterpret_cast<uint64_t>(textureEntry.image);
 }
 
 uint64_t RendererVulkan::GetInternalColorAttachmentID(FrameBufferHandle handle) {
 	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	return reinterpret_cast<uint64_t>(fb.colorImage);
+	TextureVulkan& texture = GetTextureEntry(fb.colorTexture);
+	return reinterpret_cast<uint64_t>(texture.imageView);
 }
 
 uint64_t RendererVulkan::GetInternalDepthAttachmentID(FrameBufferHandle handle) {
 	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	return reinterpret_cast<uint64_t>(fb.depthImage);
+	TextureVulkan& texture = GetTextureEntry(fb.depthTexture);
+	return reinterpret_cast<uint64_t>(texture.imageView);
 }
 
 VkInstance RendererVulkan::GetInstance() const {
