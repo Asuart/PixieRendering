@@ -20,6 +20,7 @@ class Window {
 	glm::ivec2 GetResolution() const;
 	bool GetShouldClose() const;
 	RenderAPI GetRenderAPI() const;
+	GLFWwindow* GetGLFWWindow() const;
 
 	virtual void HandleEvent(const WindowEvent& event);
 	virtual void SwapBuffers();

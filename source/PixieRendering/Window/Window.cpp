@@ -36,6 +36,10 @@ RenderAPI Window::GetRenderAPI() const {
 	return m_renderAPI;
 }
 
+GLFWwindow* Window::GetGLFWWindow() const {
+	return m_window;
+}
+
 void Window::Close() {
 	glfwSetWindowShouldClose(m_window, true);
 }

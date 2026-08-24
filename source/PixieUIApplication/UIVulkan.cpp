@@ -1,13 +1,13 @@
 #include "UIVulkan.h"
 
-#include <vulkan/vulkan.hpp>
-#include <imgui.h>
-#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <imgui.h>
+#include <vulkan/vulkan.hpp>
 
+#include <PixieRendering/Renderer/Vulkan/RendererVulkan.h>
 #include <PixieRendering/Window/Window.h>
 #include <PixieRendering/Window/WindowVulkan.h>
-#include <PixieRendering/Renderer/Vulkan/RendererVulkan.h>
 
 #include <PixieApplication/Log/Log.h>
 
@@ -17,21 +17,18 @@ using namespace PixieRenderer;
 
 namespace PixieUI {
 
-UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) :
-	UI(mainWindow, docking) {
-	VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-	};
+UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) : UI(mainWindow, docking) {
+	VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		                                  { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
 
 	VkDescriptorPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -58,7 +55,10 @@ UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) :
 
 	ImGui::StyleColorsDark();
 
-	// ImGui_ImplSDL2_InitForVulkan(mainWindow->GetSDLWindow());
+	if (!ImGui_ImplGlfw_InitForVulkan(mainWindow->GetGLFWWindow(), true)) {
+		PixieApp::Log::Error("Failed to init imgui for glfw vulkan.");
+		exit(2);
+	}
 
 	ImGui_ImplVulkan_InitInfo init_info = {};
 	init_info.ApiVersion = VK_API_VERSION_1_0;
@@ -66,25 +66,28 @@ UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) :
 	init_info.PhysicalDevice = renderer->GetPhysicalDevice();
 	init_info.Device = renderer->GetDevice();
 	init_info.Queue = renderer->GetGraphicsQueue();
-	// init_info.RenderPass = mainWindow->GetRenderPass();
-	// init_info.DescriptorPool = imguiPool;
-	// init_info.MinImageCount = 3;
-	// init_info.ImageCount = 3;
-	// init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-	// init_info.Subpass = 0;
+	init_info.DescriptorPool = imguiPool;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
+	init_info.PipelineInfoMain.RenderPass = renderer->GetRenderPass();
+	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_8_BIT;
+	init_info.PipelineInfoMain.Subpass = 0;
 
-	ImGui_ImplVulkan_Init(&init_info);
+	if (!ImGui_ImplVulkan_Init(&init_info)) {
+		PixieApp::Log::Error("Failed to init imgui for vulkan.");
+		exit(3);
+	}
 }
 
 UIVulkan::~UIVulkan() {
 	ImGui_ImplVulkan_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 }
 
 void UIVulkan::Draw() {
 	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL2_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
 	static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None;
@@ -97,7 +100,8 @@ void UIVulkan::Draw() {
 	ImGui::SetNextWindowViewport(viewport->ID);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+	               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 	if (dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) {
@@ -110,7 +114,7 @@ void UIVulkan::Draw() {
 	ImGui::PopStyleVar(3);
 
 	if (m_isDocking) {
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+		ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspaceFlags);
 	}
 

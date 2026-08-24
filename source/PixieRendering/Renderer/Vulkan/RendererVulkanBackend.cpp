@@ -339,11 +339,6 @@ void RendererVulkan::CreateLogicalDevice() {
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 	createInfo.enabledLayerCount = 0;
 
-	/*if (enableValidationLayers) {
-	    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-	    createInfo.ppEnabledLayerNames = validationLayers.data();
-	}*/
-
 	if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create logical device!");
 	}
@@ -407,7 +402,7 @@ void RendererVulkan::CreateSwapChain() {
 VkSurfaceFormatKHR
 RendererVulkan::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
 	for (const auto& availableFormat : availableFormats) {
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
+		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
 		    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			return availableFormat;
 		}

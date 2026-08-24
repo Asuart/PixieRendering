@@ -1,7 +1,7 @@
 #include "UIOpenGL.h"
 
 #include <imgui.h>
-#include <backends/imgui_impl_sdl2.h>
+#include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
 #include <PixieRendering/Window/Window.h>
@@ -25,19 +25,19 @@ UIOpenGL::UIOpenGL(WindowOpenGL* mainWindow, bool docking) :
 
 	ImGui::StyleColorsDark();
 
-	// ImGui_ImplSDL2_InitForOpenGL(mainWindow->GetSDLWindow(), mainWindow->GetOpenGLContext());
+	ImGui_ImplGlfw_InitForOpenGL(mainWindow->GetGLFWWindow(), true);
 	ImGui_ImplOpenGL3_Init();
 }
 
 UIOpenGL::~UIOpenGL() {
 	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplSDL2_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 }
 
 void UIOpenGL::Draw() {
 	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL2_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
 	static ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None;

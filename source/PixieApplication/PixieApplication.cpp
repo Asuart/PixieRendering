@@ -34,17 +34,23 @@ void PixieApplication::Start() {
 
 		Time::Update();
 
+		m_renderer->StartFrame();
+
 		OnDrawFrame();
 		m_window->SwapBuffers();
 
+		m_renderer->EndFrame();
+
 		UserInput::Reset();
 
-		WindowEvent event;
-		while (false) {
-			m_window->HandleEvent(event);
-			//UserInput::HandleEvent(event);
-			//HandleEvent(event);
-		}
+		m_window->PollEvents();
+
+		//WindowEvent event;
+		//while (false) {
+		//	m_window->HandleEvent(event);
+		//	UserInput::HandleEvent(event);
+		//	HandleEvent(event);
+		//}
 
 		GlobalTimer::StopTimer("Main Loop");
 	}

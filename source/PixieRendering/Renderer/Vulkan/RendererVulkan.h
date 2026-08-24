@@ -102,6 +102,7 @@ class RendererVulkan : public IRenderer {
 	VkQueue GetGraphicsQueue() const;
 	VkQueue GetPresentQueue() const;
 	VkCommandBuffer GetCommandBuffer() const;
+	VkRenderPass GetRenderPass() const;
 
   private: // API
 	// Resources

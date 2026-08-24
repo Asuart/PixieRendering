@@ -1410,6 +1410,10 @@ VkCommandBuffer RendererVulkan::GetCommandBuffer() const {
 	return m_commandBuffers[m_currentFrame];
 }
 
+VkRenderPass RendererVulkan::GetRenderPass() const {
+	return m_renderPass;
+}
+
 TextureVulkan& RendererVulkan::GetTextureEntry(TextureHandle handle) {
 	return m_textures[handle.id];
 }

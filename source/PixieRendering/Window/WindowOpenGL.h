@@ -8,6 +8,8 @@ class WindowOpenGL : public Window {
 	WindowOpenGL(const std::string& name, glm::ivec2 resolution);
 	~WindowOpenGL();
 
+
+
   protected:
 	void HandleEvent(const WindowEvent& event) override;
 };
