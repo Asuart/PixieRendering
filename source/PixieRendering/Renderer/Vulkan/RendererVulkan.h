@@ -6,6 +6,9 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "VulkanDevice.h"
+#include "VulkanSwapchain.h"
+
 #include "ComputeProgramVulkan.h"
 #include "FrameBufferVulkan.h"
 #include "MaterialVulkan.h"
@@ -144,32 +147,18 @@ class RendererVulkan : public IRenderer {
 	static constexpr uint32_t cMaxFramesInFlight = 3;
 
   private: // BACKEND
+	VulkanDevice m_device;
+	std::unique_ptr<VulkanSwapchain> m_swapchain = nullptr;
+
 	// General
 	bool m_framebufferResized = false;
-	std::vector<const char*> m_requiredExtensions = {};
 	// Instance
 	VkInstance m_instance = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
 	// Surface
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-	// Devices
-	VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-	VkDevice m_device = VK_NULL_HANDLE;
-	// Queues
-	VkQueue m_graphicsQueue = VK_NULL_HANDLE;
-	VkQueue m_presentQueue = VK_NULL_HANDLE;
-	// Swapchain
-	VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
-	VkFormat m_swapChainImageFormat;
-	VkExtent2D m_swapChainExtent;
-	std::vector<VkImage> m_swapChainImages = {};
-	std::vector<VkImageView> m_swapChainImageViews = {};
-	std::vector<VkFramebuffer> m_swapChainFramebuffers = {};
 	// Render pass
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
-	VkImage m_depthImage = VK_NULL_HANDLE;
-	VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
-	VkImageView m_depthImageView = VK_NULL_HANDLE;
 	// Command pool
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> m_commandBuffers = {};
@@ -183,50 +172,15 @@ class RendererVulkan : public IRenderer {
 	void InitVulkan();
 	void Cleanup();
 
-	void CleanupSwapChain();
 	void RecreateSwapChain();
 
 	void CreateInstance();
 	void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 	void SetupDebugMessenger();
 	void CreateSurface();
-	void PickPhysicalDevice();
-	void CreateLogicalDevice();
-	void CreateSwapChain();
-	void CreateSwapchainImageViews();
-	void CreateRenderPass();
-	void CreateFramebuffers();
-	void CreateCommandPool();
-	void CreateDepthResources();
+	void InitializeDevice();
 	void CreateSyncObjects();
-	void CreateCommandBuffers();
 
-	void CreateImage(
-	    uint32_t width,
-	    uint32_t height,
-	    uint32_t mipLevels,
-	    VkSampleCountFlagBits numSamples,
-	    VkFormat format,
-	    VkImageTiling tiling,
-	    VkImageUsageFlags usage,
-	    VkMemoryPropertyFlags properties,
-	    VkImage& image,
-	    VkDeviceMemory& imageMemory
-	);
-	void CreateImageView(
-	    VkImage image,
-	    VkFormat format,
-	    VkImageAspectFlags aspectFlags,
-	    uint32_t mipLevels,
-	    VkImageView& outImageView
-	);
-	void TransitionImageLayout(
-	    VkImage image,
-	    VkFormat format,
-	    VkImageLayout oldLayout,
-	    VkImageLayout newLayout,
-	    uint32_t mipLevels
-	);
 	void GenerateMipmaps(
 	    VkImage image,
 	    VkFormat imageFormat,
@@ -234,18 +188,6 @@ class RendererVulkan : public IRenderer {
 	    int32_t texHeight,
 	    uint32_t mipLevels
 	);
-
-	void CreateBuffer(
-	    VkDeviceSize size,
-	    VkBufferUsageFlags usage,
-	    VkMemoryPropertyFlags properties,
-	    VkBuffer& buffer,
-	    VkDeviceMemory& bufferMemory
-	);
-	void LoadBuffer(VkBuffer dstBuffer, VkDeviceSize bufferSize, const void* bufferData);
-	void FreeBuffer(VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 	void CreateMaterialDescriptorSetLayout(
 	    const std::vector<ShaderBinding>& bindings,
@@ -267,29 +209,8 @@ class RendererVulkan : public IRenderer {
 	    VkPipeline& outPipeline
 	);
 
-	VkCommandBuffer BeginSingleTimeCommands();
-	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
-
-	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-	VkFormat FindSupportedFormat(
-	    const std::vector<VkFormat>& candidates,
-	    VkImageTiling tiling,
-	    VkFormatFeatureFlags features
-	);
-	VkFormat FindDepthFormat();
-	VkSurfaceFormatKHR
-	ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR
-	ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
-	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device);
-	VkImageAspectFlags GetAspectMask(VkFormat format);
-
 	bool IsDeviceSuitable(VkPhysicalDevice device);
-	bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 	bool CheckValidationLayerSupport();
-	bool HasStencilComponent(VkFormat format);
 
 	static std::vector<VkVertexInputBindingDescription> GetMeshBindingDescriptions();
 	static std::vector<VkVertexInputAttributeDescription> GetMeshAttributeDescriptions();

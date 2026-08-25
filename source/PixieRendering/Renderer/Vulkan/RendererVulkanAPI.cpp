@@ -295,7 +295,7 @@ FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution) {
 	TextureVulkan colorTexture;
 	colorTexture.width = resolution.x;
 	colorTexture.height = resolution.y;
-	colorTexture.format = m_swapChainImageFormat;
+	colorTexture.format = m_swapchain->GetFormat();
 
 	TextureVulkan depthTexture;
 	depthTexture.width = resolution.x;

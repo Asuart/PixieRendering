@@ -129,8 +129,8 @@ class IRenderer {
 	RenderAPI m_renderAPI = RenderAPI::Undefined;
 	uint32_t m_surfaceWidth = 0;
 	uint32_t m_surfaceHeight = 0;
-	glm::ivec2 m_viewportStart = { 0, 0 };
-	glm::ivec2 m_viewportResolution = { 0, 0 };
+	glm::uvec2 m_viewportStart = { 0, 0 };
+	glm::uvec2 m_viewportResolution = { 0, 0 };
 };
 
 } // namespace PixieRenderer
