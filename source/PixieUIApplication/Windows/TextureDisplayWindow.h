@@ -4,6 +4,8 @@
 #include <PixieRendering/ResourceHandles.h>
 #include <PixieRendering/Renderer/IRenderer.h>
 
+#include <vulkan/vulkan.h>
+
 class WindowUI;
 
 namespace PixieUI {
@@ -23,6 +25,7 @@ protected:
 	PixieRenderer::MaterialHandle m_shader;
 	PixieRenderer::MeshHandle m_screenPlane;
 	glm::uvec2 m_viewportResolution;
+	VkDescriptorSet m_displayTexture;
 
     float Aspect(glm::ivec2 resolution);
 };

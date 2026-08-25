@@ -34,8 +34,14 @@ void PixieApplication::Start() {
 
 		Time::Update();
 
+		m_renderer->StartFrame();
+
 		OnDrawFrame();
-		m_window->SwapBuffers();
+		if (m_renderAPI == RenderAPI::OpenGL) {
+			m_window->SwapBuffers();
+		}
+
+		m_renderer->EndFrame();
 
 		UserInput::Reset();
 		m_window->PollEvents();

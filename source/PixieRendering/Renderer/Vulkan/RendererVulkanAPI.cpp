@@ -36,16 +36,68 @@ void RendererVulkan::StartFrame() {
 	}
 
 	vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
-
 	vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
 
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	if (vkBeginCommandBuffer(m_commandBuffers[m_currentFrame], &beginInfo) != VK_SUCCESS) {
 		throw std::runtime_error("failed to begin recording command buffer!");
 	}
 
+	m_renderRequests.clear();
+}
+
+void RendererVulkan::EndFrame() {
+	if (vkEndCommandBuffer(m_commandBuffers[m_currentFrame]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to record command buffer!");
+	}
+
+	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+
+	if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) !=
+	    VK_SUCCESS) {
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	VkSwapchainKHR swapChains[] = { m_swapChain };
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &m_nextImageIndex;
+
+	VkResult result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized) {
+		m_framebufferResized = false;
+		RecreateSwapChain();
+	} else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+
+	m_currentFrame = (m_currentFrame + 1) % cMaxFramesInFlight;
+
+	WaitIdle();
+}
+
+void RendererVulkan::BeginRenderPass() {
 	VkRenderPass renderPass = m_renderPass;
 	VkFramebuffer framebuffer = m_swapChainFramebuffers[m_nextImageIndex];
 	VkExtent2D extent = m_swapChainExtent;
@@ -97,7 +149,7 @@ void RendererVulkan::StartFrame() {
 	m_renderRequests.clear();
 }
 
-void RendererVulkan::EndFrame() {
+void RendererVulkan::EndRenderPass() {
 	for (const RenderRequest& request : m_renderRequests) {
 		MeshVulkan& mesh = GetMeshEntry(request.meshHandle);
 		MaterialVulkan& material = GetMaterialEntry(request.materialHandle);
@@ -158,51 +210,7 @@ void RendererVulkan::EndFrame() {
 
 	vkCmdEndRenderPass(m_commandBuffers[m_currentFrame]);
 
-	if (vkEndCommandBuffer(m_commandBuffers[m_currentFrame]) != VK_SUCCESS) {
-		throw std::runtime_error("failed to record command buffer!");
-	}
-
-	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
-
-	if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) !=
-	    VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
-	}
-
-	VkSwapchainKHR swapChains[] = { m_swapChain };
-
-	VkPresentInfoKHR presentInfo{};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = signalSemaphores;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = swapChains;
-	presentInfo.pImageIndices = &m_nextImageIndex;
-
-	VkResult result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized) {
-		m_framebufferResized = false;
-		RecreateSwapChain();
-	} else if (result != VK_SUCCESS) {
-		throw std::runtime_error("failed to present swap chain image!");
-	}
-
-	m_currentFrame = (m_currentFrame + 1) % cMaxFramesInFlight;
-
-	WaitIdle();
+	MemoryBarriersAll();
 }
 
 MeshHandle RendererVulkan::CreateMesh(const Mesh* mesh) {
@@ -278,6 +286,8 @@ void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 }
 
 FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution) {
+	resolution = glm::clamp(resolution, { 1, 1 }, resolution);
+
 	FrameBufferVulkan fb;
 	fb.width = resolution.x;
 	fb.height = resolution.y;
@@ -311,6 +321,23 @@ FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution) {
 	    1,
 	    colorTexture.imageView
 	);
+
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.anisotropyEnable = VK_FALSE;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &colorTexture.sampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create framebuffer color sampler!");
+	}
 
 	CreateImage(
 	    resolution.x,
@@ -409,6 +436,8 @@ void RendererVulkan::DestroyFrameBuffer(FrameBufferHandle handle) {
 }
 
 void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
+	resolution = glm::clamp(resolution, { 1, 1 }, resolution);
+
 	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
 	if (fb.width == resolution.x && fb.height == resolution.y) {
 		return;
@@ -734,8 +763,7 @@ void RendererVulkan::SetTextureWrap(
 	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 	samplerInfo.mipLodBias = 0.0f;
 
-	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.sampler) !=
-	    VK_SUCCESS) {
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &textureEntry.sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to recreate texture sampler!");
 	}
 }
@@ -1096,7 +1124,7 @@ void RendererVulkan::CreateMaterialPipeline(
 	VkPipelineMultisampleStateCreateInfo multisampling{};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = m_msaaSamples;
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{};
 	depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -1187,9 +1215,9 @@ MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
 	);
 	material.pipelines[m_renderPass] = pipeline;
 
-	//for (size_t i = 0; i < shader.stages.size(); i++) {
+	// for (size_t i = 0; i < shader.stages.size(); i++) {
 	//	vkDestroyShaderModule(m_device, shader.stages[i], nullptr);
-	//}
+	// }
 
 	CreateMaterialDescriptorPool(material.bindingsInfo.bindings, material.descriptorPool);
 
@@ -1291,6 +1319,11 @@ void RendererVulkan::DestroyMaterial(MaterialHandle handle) {
 	}
 	material.pipelines.clear();
 
+	for (VkShaderModule module : material.shaderStages) {
+		vkDestroyShaderModule(m_device, module, nullptr);
+	}
+	material.shaderStages.clear();
+
 	vkDestroyPipelineLayout(m_device, material.pipelineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(m_device, material.descriptorSetLayout, nullptr);
 }
@@ -1318,7 +1351,60 @@ ComputeProgramHandle RendererVulkan::CreateComputeProgram(const char* source) {
 		allocInfo.descriptorPool = prog.descriptorPool;
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &prog.descriptorSetLayout;
-		vkAllocateDescriptorSets(m_device, &allocInfo, &prog.descriptorSets[i]);
+		if (vkAllocateDescriptorSets(m_device, &allocInfo, &prog.descriptorSets[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate descriptor sets for compute program!");
+		}
+	}
+
+	for (const ShaderBinding& b : compiled.bindingsInfo.bindings) {
+		if (b.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+			uint32_t binding = b.binding;
+			uint32_t blockSize = b.size;
+			std::vector<BufferResourceVulkan> buffers(cMaxFramesInFlight);
+			for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
+				BufferResourceVulkan& res = buffers[frame];
+				CreateBuffer(
+				    blockSize,
+				    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				    res.buffer,
+				    res.bufferMemory
+				);
+				vkMapMemory(m_device, res.bufferMemory, 0, blockSize, 0, &res.bufferMapped);
+				res.size = blockSize;
+			}
+			prog.uniformBuffers[binding] = buffers;
+		}
+	}
+
+	for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
+		std::vector<VkWriteDescriptorSet> writes;
+		for (const auto& [binding, buffers] : prog.uniformBuffers) {
+			const BufferResourceVulkan& res = buffers[frame];
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = res.buffer;
+			bufferInfo.offset = 0;
+			bufferInfo.range = res.size;
+
+			VkWriteDescriptorSet write{};
+			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write.dstSet = prog.descriptorSets[frame];
+			write.dstBinding = binding;
+			write.dstArrayElement = 0;
+			write.descriptorCount = 1;
+			write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			write.pBufferInfo = &bufferInfo;
+			writes.push_back(write);
+		}
+		if (!writes.empty()) {
+			vkUpdateDescriptorSets(
+			    m_device,
+			    static_cast<uint32_t>(writes.size()),
+			    writes.data(),
+			    0,
+			    nullptr
+			);
+		}
 	}
 
 	VkComputePipelineCreateInfo pipelineInfo{};
@@ -1495,6 +1581,16 @@ RendererVulkan::GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle) {
 
 FrameBufferVulkan& RendererVulkan::GetFrameBufferEntry(FrameBufferHandle handle) {
 	return m_frameBuffers[handle.id];
+}
+
+VkImageView RendererVulkan::GetTextureImageView(TextureHandle handle) {
+	TextureVulkan& texture = GetTextureEntry(handle);
+	return texture.imageView;
+}
+
+VkSampler RendererVulkan::GetTextureSmapler(TextureHandle handle) {
+	TextureVulkan& texture = GetTextureEntry(handle);
+	return texture.sampler;
 }
 
 } // namespace PixieRenderer

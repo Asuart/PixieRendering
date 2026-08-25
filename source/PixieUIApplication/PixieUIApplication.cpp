@@ -27,9 +27,9 @@ PixieUIApplication::PixieUIApplication(const std::string& name, glm::ivec2 resol
 
 void PixieUIApplication::OnDrawFrame() {
 	m_ui->OnBeforeDrawFrame();
-	m_renderer->StartFrame();
+	m_renderer->BeginRenderPass();
 	m_ui->Draw();
-	m_renderer->EndFrame();
+	m_renderer->EndRenderPass();
 }
 
 void PixieUIApplication::HandleEvent(const WindowEvent& event) {

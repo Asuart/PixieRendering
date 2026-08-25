@@ -3,6 +3,10 @@
 #include <imgui.h>
 #include <string>
 
+#include <PixieRendering/Renderer/Vulkan/RendererVulkan.h>
+
+#include "../../dependencies/imgui/backends/imgui_impl_vulkan.h"
+
 using namespace PixieRenderer;
 
 namespace PixieUI {
@@ -54,6 +58,8 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle te
 	m_viewportResolution = { 1280, 720 };
 	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution);
 
+	SetTexture(texture);
+
 	Material mat{ VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE };
 	m_shader = m_renderer->CreateMaterial(&mat);
 
@@ -70,9 +76,13 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle te
 }
 
 void TextureDisplayWindow::OnBeforeDraw() {
+	if (m_viewportResolution.x == 0 || m_viewportResolution.y == 0) {
+		return;
+	}
+
 	m_renderer->ResizeFrameBuffer(m_frameBuffer, m_viewportResolution);
 	m_renderer->BindFrameBuffer(m_frameBuffer);
-	m_renderer->StartFrame();
+	m_renderer->BeginRenderPass();
 
 	struct PlaceUBO {
 		glm::vec2 position = { 0.0f, 0.0f };
@@ -90,10 +100,10 @@ void TextureDisplayWindow::OnBeforeDraw() {
 	}
 
 	m_renderer->LoadUniformBuffer(m_shader, "PlaneUBO", &planeUBO, sizeof(PlaceUBO));
-	// m_renderer->BindTexture(m_shader, "displayTexture", m_targetTexture, 0);
-	m_renderer->DrawMesh(m_screenPlane, m_shader);
+	//// m_renderer->BindTexture(m_shader, "displayTexture", m_targetTexture, 0);
+	 m_renderer->DrawMesh(m_screenPlane, m_shader);
 
-	m_renderer->EndFrame();
+	m_renderer->EndRenderPass();
 	m_renderer->UnbindFrameBuffer();
 }
 
@@ -107,19 +117,19 @@ void TextureDisplayWindow::Draw() {
 		ImGui::SetNextWindowSize(viewportResolution);
 		m_viewportResolution = { viewportResolution.x, viewportResolution.y };
 
-		ImGui::Image(
-		    (void*)m_renderer->GetInternalColorAttachmentID(m_frameBuffer),
-		    viewportResolution,
-		    { 0.0, 1.0 },
-		    { 1.0, 0.0 }
-		);
+		ImGui::Image(m_displayTexture, viewportResolution, { 0.0, 1.0 }, { 1.0, 0.0 });
 	}
 	ImGui::End();
 	ImGui::PopStyleVar();
 }
 
 void TextureDisplayWindow::SetTexture(TextureHandle texture) {
-	m_targetTexture = texture;
+	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
+	m_displayTexture = ImGui_ImplVulkan_AddTexture(
+	    renderer->GetTextureSmapler(texture),
+	    renderer->GetTextureImageView(texture),
+	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	);
 }
 
 float TextureDisplayWindow::Aspect(glm::ivec2 resolution) {

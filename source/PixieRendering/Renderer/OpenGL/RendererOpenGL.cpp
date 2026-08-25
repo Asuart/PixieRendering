@@ -35,6 +35,12 @@ void RendererOpenGL::EndFrame() {
 	assert(m_viewportStates.size() == 0);
 }
 
+void RendererOpenGL::BeginRenderPass() {
+}
+
+void RendererOpenGL::EndRenderPass() {
+}
+
 MeshHandle RendererOpenGL::CreateMesh(const Mesh* mesh) {
 	MeshOpenGL meshEntry;
 
@@ -708,7 +714,7 @@ void RendererOpenGL::MemoryBarriersAll() {
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) { 
+TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) {
 	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
 	return TextureHandle(fb.GetColorHandle());
 }

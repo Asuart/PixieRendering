@@ -24,6 +24,9 @@ class RendererOpenGL : public IRenderer {
 	void StartFrame() override;
 	void EndFrame() override;
 
+	void BeginRenderPass() override;
+	void EndRenderPass() override;
+
 	MeshHandle CreateMesh(const Mesh* mesh) override;
 	void DestroyMesh(MeshHandle handle) override;
 	void LoadMesh(MeshHandle handle, const Mesh* mesh) override;

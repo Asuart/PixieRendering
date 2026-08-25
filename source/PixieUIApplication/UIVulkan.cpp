@@ -70,7 +70,7 @@ UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) : UI(mainWindow, dock
 	init_info.MinImageCount = 2;
 	init_info.ImageCount = 2;
 	init_info.PipelineInfoMain.RenderPass = renderer->GetRenderPass();
-	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_8_BIT;
+	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.PipelineInfoMain.Subpass = 0;
 
 	if (!ImGui_ImplVulkan_Init(&init_info)) {

@@ -35,6 +35,9 @@ class IRenderer {
 	virtual void StartFrame() = 0;
 	virtual void EndFrame() = 0;
 
+	virtual void BeginRenderPass() = 0;
+	virtual void EndRenderPass() = 0;
+
 	virtual MeshHandle CreateMesh(const Mesh* mesh) = 0;
 	virtual void DestroyMesh(MeshHandle handle) = 0;
 	virtual void LoadMesh(MeshHandle handle, const Mesh* mesh) = 0;

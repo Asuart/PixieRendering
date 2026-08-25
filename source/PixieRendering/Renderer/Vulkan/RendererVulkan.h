@@ -27,6 +27,9 @@ class RendererVulkan : public IRenderer {
 	void StartFrame();
 	void EndFrame();
 
+	void BeginRenderPass();
+	void EndRenderPass();
+
 	MeshHandle CreateMesh(const Mesh* mesh = nullptr);
 	void DestroyMesh(MeshHandle handle);
 	void LoadMesh(MeshHandle handle, const Mesh* mesh);
@@ -46,7 +49,8 @@ class RendererVulkan : public IRenderer {
 	    TextureFiltering minFilter,
 	    TextureFiltering magFilter
 	);
-	void SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
+	void
+	SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
 	void GenerateTextureMipmaps(TextureHandle handle);
 	glm::ivec2 GetTextureResolution(TextureHandle handle);
 	void BindTexture(
@@ -132,6 +136,10 @@ class RendererVulkan : public IRenderer {
 	ShaderStorageBufferVulkan& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
 	FrameBufferVulkan& GetFrameBufferEntry(FrameBufferHandle handle);
 
+  public:
+	VkImageView GetTextureImageView(TextureHandle handle);
+	VkSampler GetTextureSmapler(TextureHandle handle);
+
   public: // BACKEND
 	static constexpr uint32_t cMaxFramesInFlight = 3;
 
@@ -146,7 +154,6 @@ class RendererVulkan : public IRenderer {
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	// Devices
 	VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-	VkSampleCountFlagBits m_msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 	VkDevice m_device = VK_NULL_HANDLE;
 	// Queues
 	VkQueue m_graphicsQueue = VK_NULL_HANDLE;
@@ -160,9 +167,6 @@ class RendererVulkan : public IRenderer {
 	std::vector<VkFramebuffer> m_swapChainFramebuffers = {};
 	// Render pass
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
-	VkImage m_colorImage = VK_NULL_HANDLE;
-	VkDeviceMemory m_colorImageMemory = VK_NULL_HANDLE;
-	VkImageView m_colorImageView = VK_NULL_HANDLE;
 	VkImage m_depthImage = VK_NULL_HANDLE;
 	VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 	VkImageView m_depthImageView = VK_NULL_HANDLE;
@@ -193,7 +197,6 @@ class RendererVulkan : public IRenderer {
 	void CreateRenderPass();
 	void CreateFramebuffers();
 	void CreateCommandPool();
-	void CreateColorResources();
 	void CreateDepthResources();
 	void CreateSyncObjects();
 	void CreateCommandBuffers();
@@ -274,7 +277,6 @@ class RendererVulkan : public IRenderer {
 	    VkFormatFeatureFlags features
 	);
 	VkFormat FindDepthFormat();
-	VkSampleCountFlagBits GetMaxUsableSampleCount();
 	VkSurfaceFormatKHR
 	ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR
