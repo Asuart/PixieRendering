@@ -39,18 +39,15 @@ class IRenderer {
 	virtual void EndRenderPass() = 0;
 
 	virtual MeshHandle CreateMesh(const Mesh* mesh) = 0;
-	virtual void DestroyMesh(MeshHandle handle) = 0;
 	virtual void LoadMesh(MeshHandle handle, const Mesh* mesh) = 0;
 	virtual void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) = 0;
 
-	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution) = 0;
-	virtual void DestroyFrameBuffer(FrameBufferHandle handle) = 0;
+	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format) = 0;
 	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) = 0;
 	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
 	virtual void UnbindFrameBuffer() = 0;
 
 	virtual TextureHandle CreateTexture(const Image2D* image) = 0;
-	virtual void DestroyTexture(TextureHandle handle) = 0;
 	virtual void LoadTexture(TextureHandle handle, const Image2D* image) = 0;
 	virtual void SetTextureFiltering(
 	    TextureHandle handle,
@@ -80,7 +77,6 @@ class IRenderer {
 
 	virtual ShaderStorageBufferHandle
 	CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) = 0;
-	virtual void DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) = 0;
 	virtual void LoadShaderStorageBuffer(
 	    ShaderStorageBufferHandle handle,
 	    const uint8_t* data,
@@ -94,7 +90,6 @@ class IRenderer {
 	) = 0;
 
 	virtual UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size) = 0;
-	virtual void DestroyUniformBuffer(UniformBufferHandle handle) = 0;
 	virtual void
 	LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) = 0;
 	virtual void LoadUniformBuffer(
@@ -105,10 +100,8 @@ class IRenderer {
 	) = 0;
 
 	virtual MaterialHandle CreateMaterial(const Material* materialInfo) = 0;
-	virtual void DestroyMaterial(MaterialHandle handle) = 0;
 
 	virtual ComputeProgramHandle CreateComputeProgram(const char* source) = 0;
-	virtual void DestroyComputeProgram(ComputeProgramHandle handle) = 0;
 	virtual void
 	DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z) = 0;
 
@@ -116,13 +109,6 @@ class IRenderer {
 
 	virtual void WaitIdle() = 0;
 	virtual void MemoryBarriersAll() = 0;
-
-	virtual TextureHandle GetColorAttachmentHandle(FrameBufferHandle handle) = 0;
-	virtual TextureHandle GetDepthAttachmentHandle(FrameBufferHandle handle) = 0;
-
-	virtual uint64_t GetInternalID(TextureHandle handle) = 0;
-	virtual uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle) = 0;
-	virtual uint64_t GetInternalDepthAttachmentID(FrameBufferHandle handle) = 0;
 
   protected:
 	Window* m_window = nullptr;

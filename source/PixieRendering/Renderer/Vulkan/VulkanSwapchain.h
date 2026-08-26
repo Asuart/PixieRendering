@@ -5,10 +5,20 @@
 
 namespace PixieRenderer {
 
+class VulkanDevice;
+
 class VulkanSwapchain {
   public:
-	VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
+	VulkanSwapchain(VulkanDevice& parentDevice, VkExtent2D extent, VkRenderPass renderPass);
+	~VulkanSwapchain();
+
+	VkSwapchainKHR GetSwapChain() const;
+
+  private:
+	VulkanDevice& m_device;
 	VkExtent2D m_extent = { 0, 0 };
+	VkRenderPass m_renderPass = VK_NULL_HANDLE;
+	VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
 	VkFormat m_format = VK_FORMAT_UNDEFINED;
 	std::vector<VkImage> m_images = {};
 	std::vector<VkImageView> m_imageViews = {};
@@ -18,18 +28,7 @@ class VulkanSwapchain {
 	VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 	VkImageView m_depthImageView = VK_NULL_HANDLE;
 
-	VulkanSwapchain(
-	    VkSwapchainKHR swapchain,
-	    VkExtent2D extent,
-	    VkFormat format,
-	    const std::vector<VkImage>& images,
-	    const std::vector<VkImageView>& imageViews,
-	    const std::vector<VkFramebuffer>& framebuffers,
-	    VkImage depthImage,
-	    VkImageView depthImageView,
-	    VkDeviceMemory depthImageMemory
-	);
-
+  public:
 	static VkSurfaceFormatKHR
 	ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 	static VkPresentModeKHR

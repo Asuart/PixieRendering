@@ -10,14 +10,13 @@
 #include "VulkanSwapchain.h"
 
 #include "ComputeProgramVulkan.h"
-#include "FrameBufferVulkan.h"
-#include "MaterialVulkan.h"
-#include "MeshVulkan.h"
+#include "VulkanFrameBuffer.h"
+#include "VulkanMaterial.h"
+#include "VulkanMesh.h"
 #include "QueueFamilyIndices.h"
-#include "ShaderStorageBufferVulkan.h"
 #include "SwapChainSupportDetails.h"
 #include "VulkanTexture.h"
-#include "UniformBufferVulkan.h"
+#include "VulkanBuffer.h"
 
 namespace PixieRenderer {
 
@@ -34,18 +33,15 @@ class RendererVulkan : public IRenderer {
 	void EndRenderPass();
 
 	MeshHandle CreateMesh(const Mesh* mesh = nullptr);
-	void DestroyMesh(MeshHandle handle);
 	void LoadMesh(MeshHandle handle, const Mesh* mesh);
 	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle);
 
-	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution);
-	void DestroyFrameBuffer(FrameBufferHandle handle);
+	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format);
 	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution);
 	void BindFrameBuffer(FrameBufferHandle handle);
 	void UnbindFrameBuffer();
 
 	TextureHandle CreateTexture(const Image2D* image);
-	void DestroyTexture(TextureHandle handle);
 	void LoadTexture(TextureHandle handle, const Image2D* image);
 	void SetTextureFiltering(
 	    TextureHandle handle,
@@ -54,7 +50,7 @@ class RendererVulkan : public IRenderer {
 	);
 	void
 	SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
-	void GenerateTextureMipmaps(TextureHandle handle);
+	void GenerateTextureMipmaps(TextureHandle handle, uint32_t);
 	glm::ivec2 GetTextureResolution(TextureHandle handle);
 	void BindTexture(
 	    MaterialHandle materialHandle,
@@ -70,7 +66,6 @@ class RendererVulkan : public IRenderer {
 	);
 
 	ShaderStorageBufferHandle CreateShaderStorageBuffer(const uint8_t* data, uint32_t size);
-	void DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle);
 	void
 	LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, const uint8_t* data, uint32_t size);
 	uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle);
@@ -78,7 +73,6 @@ class RendererVulkan : public IRenderer {
 	GetShaderStorageBufferData(ShaderStorageBufferHandle handle, uint32_t offset, uint32_t size);
 
 	UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size);
-	void DestroyUniformBuffer(UniformBufferHandle handle);
 	void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size);
 	void LoadUniformBuffer(
 	    MaterialHandle handle,
@@ -88,23 +82,14 @@ class RendererVulkan : public IRenderer {
 	);
 
 	MaterialHandle CreateMaterial(const Material* material);
-	void DestroyMaterial(MaterialHandle material);
 
 	ComputeProgramHandle CreateComputeProgram(const char* source);
-	void DestroyComputeProgram(ComputeProgramHandle handle);
 	void DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z);
 
 	void SetViewport(glm::ivec2 start, glm::ivec2 resolution);
 
 	void WaitIdle();
 	void MemoryBarriersAll();
-
-	TextureHandle GetColorAttachmentHandle(FrameBufferHandle handle);
-	TextureHandle GetDepthAttachmentHandle(FrameBufferHandle handle);
-
-	uint64_t GetInternalID(TextureHandle handle);
-	uint64_t GetInternalColorAttachmentID(FrameBufferHandle handle);
-	uint64_t GetInternalDepthAttachmentID(FrameBufferHandle handle);
 
 	VkInstance GetInstance() const;
 	VkPhysicalDevice GetPhysicalDevice() const;
@@ -116,13 +101,13 @@ class RendererVulkan : public IRenderer {
 
   private: // API
 	// Resources
-	std::vector<MeshVulkan> m_meshes = {};
+	std::vector<VulkanMesh> m_meshes = {};
 	std::vector<VulkanTexture> m_textures = {};
-	std::vector<MaterialVulkan> m_materials = {};
+	std::vector<VulkanMaterial> m_materials = {};
 	std::vector<ComputeProgramVulkan> m_computePrograms = {};
-	std::vector<UniformBufferVulkan> m_uniformBuffers = {};
-	std::vector<ShaderStorageBufferVulkan> m_shaderStorageBuffers = {};
-	std::vector<FrameBufferVulkan> m_frameBuffers = {};
+	std::vector<VulkanBuffer> m_uniformBuffers = {};
+	std::vector<VulkanBuffer> m_shaderStorageBuffers = {};
+	std::vector<VulkanFrameBuffer> m_frameBuffers = {};
 	// Frame render order
 	struct RenderRequest {
 		MeshHandle meshHandle;
@@ -132,12 +117,12 @@ class RendererVulkan : public IRenderer {
 	FrameBufferHandle m_activeFrameBuffer = FrameBufferHandle();
 
 	VulkanTexture& GetTextureEntry(TextureHandle handle);
-	MeshVulkan& GetMeshEntry(MeshHandle handle);
-	MaterialVulkan& GetMaterialEntry(MaterialHandle handle);
+	VulkanMesh& GetMeshEntry(MeshHandle handle);
+	VulkanMaterial& GetMaterialEntry(MaterialHandle handle);
 	ComputeProgramVulkan& GetComputeProgramEntry(ComputeProgramHandle handle);
-	UniformBufferVulkan& GetUniformBufferEntry(UniformBufferHandle handle);
-	ShaderStorageBufferVulkan& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
-	FrameBufferVulkan& GetFrameBufferEntry(FrameBufferHandle handle);
+	VulkanBuffer& GetUniformBufferEntry(UniformBufferHandle handle);
+	VulkanBuffer& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
+	VulkanFrameBuffer& GetFrameBufferEntry(FrameBufferHandle handle);
 
   public:
 	VkImageView GetTextureImageView(TextureHandle handle);

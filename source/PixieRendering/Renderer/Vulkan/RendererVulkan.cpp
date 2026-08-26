@@ -32,9 +32,16 @@ void RendererVulkan::InitVulkan() {
 	InitializeDevice();
 
 	SwapChainSupportDetails swapChainSupport = m_device.QuerySwapChainSupport();
-	m_device.CreateRenderPass(VulkanSwapchain::ChooseSurfaceFormat(swapChainSupport.formats).format, m_renderPass);
+	m_device.CreateRenderPass(
+	    VulkanSwapchain::ChooseSurfaceFormat(swapChainSupport.formats).format,
+	    m_renderPass
+	);
 
-	m_swapchain = m_device.CreateSwapchain({ m_surfaceWidth, m_surfaceHeight }, m_renderPass);
+	m_swapchain = std::make_unique<VulkanSwapchain>(
+	    m_device,
+	    VkExtent2D{ m_surfaceWidth, m_surfaceHeight },
+	    m_renderPass
+	);
 
 	m_device.CreateCommandPool(m_commandPool);
 
@@ -47,7 +54,7 @@ void RendererVulkan::InitVulkan() {
 }
 
 void RendererVulkan::Cleanup() {
-	m_device.DestroySwapchain(std::move(m_swapchain));
+	m_swapchain.reset();
 
 	m_device.DestroyRenderPass(m_renderPass);
 
@@ -136,7 +143,7 @@ void RendererVulkan::EndFrame() {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
-	VkSwapchainKHR swapChains[] = { m_swapchain->m_swapchain };
+	VkSwapchainKHR swapChains[] = { m_swapchain->GetSwapChain() };
 
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -214,8 +221,8 @@ void RendererVulkan::BeginRenderPass() {
 
 void RendererVulkan::EndRenderPass() {
 	for (const RenderRequest& request : m_renderRequests) {
-		MeshVulkan& mesh = GetMeshEntry(request.meshHandle);
-		MaterialVulkan& material = GetMaterialEntry(request.materialHandle);
+		VulkanMesh& mesh = GetMeshEntry(request.meshHandle);
+		VulkanMaterial& material = GetMaterialEntry(request.materialHandle);
 
 		VkRenderPass currentRenderPass = (m_activeFrameBuffer.id != -1)
 		                                     ? GetFrameBufferEntry(m_activeFrameBuffer).renderPass
@@ -277,8 +284,7 @@ void RendererVulkan::EndRenderPass() {
 }
 
 MeshHandle RendererVulkan::CreateMesh(const Mesh* mesh) {
-	MeshVulkan meshEntry;
-	m_meshes.push_back(meshEntry);
+	m_meshes.push_back(VulkanMesh(m_device));
 
 	MeshHandle handle = MeshHandle(static_cast<uint32_t>(m_meshes.size() - 1));
 	if (mesh != nullptr) {
@@ -288,169 +294,25 @@ MeshHandle RendererVulkan::CreateMesh(const Mesh* mesh) {
 	return handle;
 }
 
-void RendererVulkan::DestroyMesh(MeshHandle handle) {
-	MeshVulkan& meshEntry = GetMeshEntry(handle);
-
-	meshEntry.indicesCount = 0;
-
-	if (meshEntry.indexBuffer != VK_NULL_HANDLE) {
-		m_device.FreeBuffer(meshEntry.indexBuffer, meshEntry.indexBufferMemory);
-		meshEntry.indexBuffer = VK_NULL_HANDLE;
-		meshEntry.indexBufferMemory = VK_NULL_HANDLE;
-	}
-
-	if (meshEntry.vertexBuffer != VK_NULL_HANDLE) {
-		m_device.FreeBuffer(meshEntry.vertexBuffer, meshEntry.vertexBufferMemory);
-		meshEntry.vertexBuffer = VK_NULL_HANDLE;
-		meshEntry.vertexBufferMemory = VK_NULL_HANDLE;
-	}
-}
-
 void RendererVulkan::LoadMesh(MeshHandle handle, const Mesh* mesh) {
-	MeshVulkan& meshEntry = GetMeshEntry(handle);
-
-	DestroyMesh(handle);
-
-	meshEntry.indicesCount = static_cast<uint32_t>(mesh->indexes.size());
-
-	if (mesh->indexes.size() > 0) {
-		m_device.CreateBuffer(
-		    sizeof(mesh->indexes[0]) * mesh->indexes.size(),
-		    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    meshEntry.indexBuffer,
-		    meshEntry.indexBufferMemory
-		);
-		m_device.LoadBuffer(
-		    meshEntry.indexBuffer,
-		    sizeof(mesh->indexes[0]) * mesh->indexes.size(),
-		    reinterpret_cast<const void*>(mesh->indexes.data())
-		);
-	}
-
-	if (mesh->vertexes.size() > 0) {
-		m_device.CreateBuffer(
-		    sizeof(mesh->vertexes[0]) * mesh->vertexes.size(),
-		    VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    meshEntry.vertexBuffer,
-		    meshEntry.vertexBufferMemory
-		);
-		m_device.LoadBuffer(
-		    meshEntry.vertexBuffer,
-		    sizeof(mesh->vertexes[0]) * mesh->vertexes.size(),
-		    reinterpret_cast<const void*>(mesh->vertexes.data())
-		);
-	}
+	VulkanMesh& meshEntry = GetMeshEntry(handle);
+	meshEntry.Load(mesh);
 }
 
 void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) {
 	m_renderRequests.push_back({ meshHandle, materialHandle });
 }
 
-FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution) {
-	resolution = glm::clamp(resolution, { 1, 1 }, resolution);
-
-	FrameBufferVulkan fb;
-
-
-	m_frameBuffers.push_back(fb);
+FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format) {
+	m_frameBuffers.push_back(
+	    VulkanFrameBuffer(m_device, resolution.x, resolution.y, ToVkFormat(format))
+	);
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
 
-void RendererVulkan::DestroyFrameBuffer(FrameBufferHandle handle) {
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	if (fb.framebuffer != VK_NULL_HANDLE) {
-		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
-		vkDestroyRenderPass(m_device, fb.renderPass, nullptr);
-		DestroyTexture(fb.colorTexture);
-		DestroyTexture(fb.depthTexture);
-	}
-}
-
 void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
-	resolution = glm::clamp(resolution, { 1, 1 }, resolution);
-
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	if (fb.width == resolution.x && fb.height == resolution.y) {
-		return;
-	}
-
-	WaitIdle();
-
-	VulkanTexture& colorTexture = GetTextureEntry(fb.colorTexture);
-	VulkanTexture& depthTexture = GetTextureEntry(fb.depthTexture);
-
-	if (fb.framebuffer != VK_NULL_HANDLE) {
-		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
-		fb.framebuffer = VK_NULL_HANDLE;
-	}
-
-	m_device.DestroyTexture(colorTexture);
-	m_device.DestroyTexture(depthTexture);
-
-	fb.width = resolution.x;
-	fb.height = resolution.y;
-
-	colorTexture.width = resolution.x;
-	colorTexture.height = resolution.y;
-
-	depthTexture.width = resolution.x;
-	depthTexture.height = resolution.y;
-
-	m_device.CreateImage(
-	    resolution.x,
-	    resolution.y,
-	    1,
-	    VK_SAMPLE_COUNT_1_BIT,
-	    colorTexture.format,
-	    VK_IMAGE_TILING_OPTIMAL,
-	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    colorTexture.image,
-	    colorTexture.memory
-	);
-	m_device.CreateImageView(
-	    colorTexture.image,
-	    colorTexture.format,
-	    VK_IMAGE_ASPECT_COLOR_BIT,
-	    1,
-	    colorTexture.imageView
-	);
-
-	m_device.CreateImage(
-	    resolution.x,
-	    resolution.y,
-	    1,
-	    VK_SAMPLE_COUNT_1_BIT,
-	    depthTexture.format,
-	    VK_IMAGE_TILING_OPTIMAL,
-	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    depthTexture.image,
-	    depthTexture.memory
-	);
-	m_device.CreateImageView(
-	    depthTexture.image,
-	    depthTexture.format,
-	    VK_IMAGE_ASPECT_DEPTH_BIT,
-	    1,
-	    depthTexture.imageView
-	);
-
-	std::array<VkImageView, 2> attachments = { colorTexture.imageView, depthTexture.imageView };
-	VkFramebufferCreateInfo fbInfo{};
-	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fbInfo.renderPass = fb.renderPass;
-	fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	fbInfo.pAttachments = attachments.data();
-	fbInfo.width = resolution.x;
-	fbInfo.height = resolution.y;
-	fbInfo.layers = 1;
-
-	if (vkCreateFramebuffer(m_device, &fbInfo, nullptr, &fb.framebuffer) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to recreate framebuffer during resize!");
-	}
+	VulkanFrameBuffer& fb = GetFrameBufferEntry(handle);
+	fb.Resize(resolution.x, resolution.y);
 }
 
 void RendererVulkan::BindFrameBuffer(FrameBufferHandle handle) {
@@ -462,9 +324,9 @@ void RendererVulkan::UnbindFrameBuffer() {
 }
 
 TextureHandle RendererVulkan::CreateTexture(const Image2D* image) {
-	VulkanTexture textureEntry;
-
-	m_textures.push_back(textureEntry);
+	m_textures.push_back(
+	    VulkanTexture(m_device, image->resolution.x, image->resolution.y, ToVkFormat(image->format))
+	);
 
 	TextureHandle handle = TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 	LoadTexture(handle, image);
@@ -472,94 +334,14 @@ TextureHandle RendererVulkan::CreateTexture(const Image2D* image) {
 	return handle;
 }
 
-void RendererVulkan::DestroyTexture(TextureHandle handle) {
-	VulkanTexture& texture = GetTextureEntry(handle);
-	m_device.DestroyTexture(texture);
-	texture = VulkanTexture();
-}
-
 void RendererVulkan::LoadTexture(TextureHandle handle, const Image2D* image) {
 	VulkanTexture& textureEntry = GetTextureEntry(handle);
-
-	textureEntry.format = ToVkFormat(image->format);
-
-	DestroyTexture(handle);
-
-	VkDeviceSize imageSize = image->resolution.x * image->resolution.y * 4;
-	textureEntry.mipLevels =
-	    static_cast<uint32_t>(
-	        std::floor(std::log2(std::max(image->resolution.x, image->resolution.y)))
-	    ) +
-	    1;
-	textureEntry.width = image->resolution.x;
-	textureEntry.height = image->resolution.y;
-
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	m_device.CreateBuffer(
-	    imageSize,
-	    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	    stagingBuffer,
-	    stagingBufferMemory
-	);
-
-	void* data;
-	vkMapMemory(m_device, stagingBufferMemory, 0, imageSize, 0, &data);
-	memcpy(data, image->pixels.data(), static_cast<size_t>(imageSize));
-	vkUnmapMemory(m_device, stagingBufferMemory);
-
-	m_device.CreateImage(
+	textureEntry.Load(
 	    image->resolution.x,
 	    image->resolution.y,
-	    textureEntry.mipLevels,
-	    VK_SAMPLE_COUNT_1_BIT,
-	    textureEntry.format,
-	    VK_IMAGE_TILING_OPTIMAL,
-	    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-	        VK_IMAGE_USAGE_SAMPLED_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    textureEntry.image,
-	    textureEntry.memory
+	    reinterpret_cast<const void*>(image->pixels.data()),
+	    ToVkFormat(image->format)
 	);
-
-	m_device.TransitionImageLayout(
-	    textureEntry.image,
-	    textureEntry.format,
-	    VK_IMAGE_LAYOUT_UNDEFINED,
-	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	    textureEntry.mipLevels
-	);
-
-	m_device.CopyBufferToImage(
-	    stagingBuffer,
-	    textureEntry.image,
-	    image->resolution.x,
-	    image->resolution.y
-	);
-
-	vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-	vkFreeMemory(m_device, stagingBufferMemory, nullptr);
-
-	m_device.GenerateMipmaps(
-	    textureEntry.image,
-	    textureEntry.format,
-	    image->resolution.x,
-	    image->resolution.y,
-	    textureEntry.mipLevels
-	);
-
-	// Image view
-	m_device.CreateImageView(
-	    textureEntry.image,
-	    textureEntry.format,
-	    VK_IMAGE_ASPECT_COLOR_BIT,
-	    textureEntry.mipLevels,
-	    textureEntry.imageView
-	);
-
-	// Image sampler
-	m_device.CreateSampler(textureEntry, textureEntry.sampler);
 }
 
 void RendererVulkan::SetTextureFiltering(
@@ -568,12 +350,7 @@ void RendererVulkan::SetTextureFiltering(
     TextureFiltering magFilter
 ) {
 	VulkanTexture& textureEntry = GetTextureEntry(handle);
-
-	textureEntry.minFilter = ToVkFilter(minFilter);
-	textureEntry.magFilter = ToVkFilter(magFilter);
-
-	m_device.DestroySampler(textureEntry.sampler);
-	m_device.CreateSampler(textureEntry, textureEntry.sampler);
+	textureEntry.SetFiltering(ToVkFilter(minFilter), ToVkFilter(magFilter));
 }
 
 void RendererVulkan::SetTextureWrap(
@@ -583,29 +360,21 @@ void RendererVulkan::SetTextureWrap(
     TextureWrap wrapW
 ) {
 	VulkanTexture& textureEntry = GetTextureEntry(handle);
-
-	textureEntry.addressModeU = ToVkSamplerAddressMode(wrapU);
-	textureEntry.addressModeV = ToVkSamplerAddressMode(wrapV);
-	textureEntry.addressModeW = ToVkSamplerAddressMode(wrapW);
-
-	m_device.DestroySampler(textureEntry.sampler);
-	m_device.CreateSampler(textureEntry, textureEntry.sampler);
+	textureEntry.SetWrap(
+	    ToVkSamplerAddressMode(wrapU),
+	    ToVkSamplerAddressMode(wrapV),
+	    ToVkSamplerAddressMode(wrapW)
+	);
 }
 
-void RendererVulkan::GenerateTextureMipmaps(TextureHandle handle) {
+void RendererVulkan::GenerateTextureMipmaps(TextureHandle handle, uint32_t levels) {
 	VulkanTexture& textureEntry = GetTextureEntry(handle);
-	GenerateMipmaps(
-	    textureEntry.image,
-	    textureEntry.format,
-	    textureEntry.width,
-	    textureEntry.height,
-	    textureEntry.mipLevels
-	);
+	textureEntry.GenerateMipmaps(levels);
 }
 
 glm::ivec2 RendererVulkan::GetTextureResolution(TextureHandle handle) {
 	VulkanTexture& textureEntry = GetTextureEntry(handle);
-	return glm::ivec2(textureEntry.width, textureEntry.height);
+	return glm::ivec2(textureEntry.GetWidth(), textureEntry.GetHeight());
 }
 
 void RendererVulkan::BindTexture(
@@ -614,7 +383,7 @@ void RendererVulkan::BindTexture(
     TextureHandle textureHandle,
     uint32_t index
 ) {
-	MaterialVulkan& material = GetMaterialEntry(materialHandle);
+	VulkanMaterial& material = GetMaterialEntry(materialHandle);
 
 	auto it = material.nameToBinding.find(name);
 	if (it == material.nameToBinding.end()) {
@@ -682,18 +451,12 @@ void RendererVulkan::BindTexture(
 
 ShaderStorageBufferHandle
 RendererVulkan::CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) {
-	ShaderStorageBufferVulkan buf;
-	buf.size = size;
-
-	m_device.CreateBuffer(
+	m_shaderStorageBuffers.push_back(VulkanBuffer(
+	    m_device,
 	    size,
 	    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    buf.buffer,
-	    buf.bufferMemory
-	);
-
-	m_shaderStorageBuffers.push_back(buf);
+	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	));
 
 	ShaderStorageBufferHandle handle(static_cast<uint32_t>(m_shaderStorageBuffers.size() - 1));
 
@@ -704,29 +467,18 @@ RendererVulkan::CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) {
 	return handle;
 }
 
-void RendererVulkan::DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) {
-	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-	if (buf.buffer != VK_NULL_HANDLE) {
-		vkDestroyBuffer(m_device, buf.buffer, nullptr);
-		vkFreeMemory(m_device, buf.bufferMemory, nullptr);
-		buf.buffer = VK_NULL_HANDLE;
-		buf.bufferMemory = VK_NULL_HANDLE;
-		buf.size = 0;
-	}
-}
-
 void RendererVulkan::LoadShaderStorageBuffer(
     ShaderStorageBufferHandle handle,
     const uint8_t* data,
     uint32_t size
 ) {
-	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-	m_device.LoadBuffer(buf.buffer, size, data);
+	VulkanBuffer& buf = GetShaderStorageBufferEntry(handle);
+	buf.Load(size, data);
 }
 
 uint32_t RendererVulkan::GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) {
-	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-	return static_cast<uint32_t>(buf.size);
+	VulkanBuffer& buf = GetShaderStorageBufferEntry(handle);
+	return static_cast<uint32_t>(buf.GetSize());
 }
 
 std::vector<uint8_t> RendererVulkan::GetShaderStorageBufferData(
@@ -734,19 +486,16 @@ std::vector<uint8_t> RendererVulkan::GetShaderStorageBufferData(
     uint32_t offset,
     uint32_t size
 ) {
-	ShaderStorageBufferVulkan& buf = GetShaderStorageBufferEntry(handle);
-	if (offset + size > buf.size) {
+	VulkanBuffer& buf = GetShaderStorageBufferEntry(handle);
+	if (offset + size > buf.GetSize()) {
 		throw std::runtime_error("Requested data range out of bounds");
 	}
 
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingMemory;
-	m_device.CreateBuffer(
+	VulkanBuffer staginBuffer(
+	    m_device,
 	    size,
 	    VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	    stagingBuffer,
-	    stagingMemory
+	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 	);
 
 	VkCommandBuffer cmd = BeginSingleTimeCommands();
@@ -759,53 +508,29 @@ std::vector<uint8_t> RendererVulkan::GetShaderStorageBufferData(
 
 	EndSingleTimeCommands(cmd);
 
-	void* mapped;
-	vkMapMemory(m_device, stagingMemory, 0, size, 0, &mapped);
+
 	std::vector<uint8_t> result(size);
 	memcpy(result.data(), mapped, size);
-	vkUnmapMemory(m_device, stagingMemory);
-
-	vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-	vkFreeMemory(m_device, stagingMemory, nullptr);
 
 	return result;
 }
 
 UniformBufferHandle RendererVulkan::CreateUniformBuffer(const uint8_t* data, uint32_t size) {
-	UniformBufferVulkan buf;
-	buf.size = size;
-
-	m_device.CreateBuffer(
+	m_uniformBuffers.push_back(VulkanBuffer(
+	    m_device,
 	    size,
 	    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-	    buf.buffer,
-	    buf.bufferMemory
-	);
+	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	));
 
-	vkMapMemory(m_device, buf.bufferMemory, 0, size, 0, &buf.bufferMapped);
+	UniformBufferHandle handle =
+	    UniformBufferHandle(static_cast<uint32_t>(m_uniformBuffers.size() - 1));
 
 	if (data != nullptr) {
-		memcpy(buf.bufferMapped, data, size);
+		LoadUniformBuffer(handle, data, size);
 	}
 
-	m_uniformBuffers.push_back(buf);
-
-	return UniformBufferHandle(static_cast<uint32_t>(m_uniformBuffers.size() - 1));
-}
-
-void RendererVulkan::DestroyUniformBuffer(UniformBufferHandle handle) {
-	UniformBufferVulkan& buf = GetUniformBufferEntry(handle);
-	if (buf.buffer != VK_NULL_HANDLE) {
-		vkUnmapMemory(m_device, buf.bufferMemory);
-		vkDestroyBuffer(m_device, buf.buffer, nullptr);
-		vkFreeMemory(m_device, buf.bufferMemory, nullptr);
-
-		buf.size = 0;
-		buf.buffer = VK_NULL_HANDLE;
-		buf.bufferMemory = VK_NULL_HANDLE;
-		buf.bufferMapped = nullptr;
-	}
+	return handle;
 }
 
 void RendererVulkan::LoadUniformBuffer(
@@ -813,8 +538,8 @@ void RendererVulkan::LoadUniformBuffer(
     const uint8_t* data,
     uint32_t size
 ) {
-	UniformBufferVulkan bufferEntry = GetUniformBufferEntry(handle);
-	memcpy(bufferEntry.bufferMapped, data, size);
+	VulkanBuffer bufferEntry = GetUniformBufferEntry(handle);
+	bufferEntry.Load(size, data);
 }
 
 void RendererVulkan::LoadUniformBuffer(
@@ -823,7 +548,7 @@ void RendererVulkan::LoadUniformBuffer(
     const void* data,
     size_t size
 ) {
-	MaterialVulkan& material = GetMaterialEntry(handle);
+	VulkanMaterial& material = GetMaterialEntry(handle);
 
 	auto it = material.nameToBinding.find(name);
 	if (it == material.nameToBinding.end()) {
@@ -1011,145 +736,8 @@ void RendererVulkan::CreateMaterialPipeline(
 }
 
 MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
-	MaterialVulkan material;
-
-	CompiledShader shader = ShaderCompilerVulkan::CompileShader(
-	    m_device,
-	    materialInfo->vertexShaderSource,
-	    materialInfo->fragmentShaderSource
-	);
-
-	material.shaderStages = shader.stages;
-	material.shaderStagesCreateInfo = shader.stagesCreateInfo;
-	material.bindingsInfo = shader.bindingsInfo;
-	for (const auto& binding : shader.bindingsInfo.bindings) {
-		material.nameToBinding[binding.name] = binding.binding;
-	}
-
-	CreateMaterialDescriptorSetLayout(material.bindingsInfo.bindings, material.descriptorSetLayout);
-	CreateMaterialPipelineLayout(material.descriptorSetLayout, material.pipelineLayout);
-
-	VkPipeline pipeline;
-	CreateMaterialPipeline(
-	    material.pipelineLayout,
-	    m_renderPass,
-	    shader.stagesCreateInfo.data(),
-	    static_cast<uint32_t>(shader.stagesCreateInfo.size()),
-	    pipeline
-	);
-	material.pipelines[m_renderPass] = pipeline;
-
-	// for (size_t i = 0; i < shader.stages.size(); i++) {
-	//	vkDestroyShaderModule(m_device, shader.stages[i], nullptr);
-	// }
-
-	CreateMaterialDescriptorPool(material.bindingsInfo.bindings, material.descriptorPool);
-
-	material.descriptorSets.resize(cMaxFramesInFlight);
-	for (uint32_t i = 0; i < cMaxFramesInFlight; i++) {
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = material.descriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &material.descriptorSetLayout;
-		if (vkAllocateDescriptorSets(m_device, &allocInfo, &material.descriptorSets[i]) !=
-		    VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
-	}
-
-	for (const ShaderBinding& b : shader.bindingsInfo.bindings) {
-		if (b.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-		    b.type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-			uint32_t binding = b.binding;
-			uint32_t blockSize = b.size;
-
-			std::vector<BufferResourceVulkan> buffers(cMaxFramesInFlight);
-			for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
-				BufferResourceVulkan& res = buffers[frame];
-				CreateBuffer(
-				    blockSize,
-				    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				    res.buffer,
-				    res.bufferMemory
-				);
-				vkMapMemory(m_device, res.bufferMemory, 0, blockSize, 0, &res.bufferMapped);
-				res.size = blockSize;
-			}
-			material.uniformBuffers[binding] = buffers;
-		}
-	}
-
-	for (uint32_t frame = 0; frame < cMaxFramesInFlight; frame++) {
-		std::vector<VkWriteDescriptorSet> writes;
-
-		for (const auto& [binding, buffers] : material.uniformBuffers) {
-			const BufferResourceVulkan& res = buffers[frame];
-			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = res.buffer;
-			bufferInfo.offset = 0;
-			bufferInfo.range = res.size;
-
-			VkWriteDescriptorSet write{};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.dstSet = material.descriptorSets[frame];
-			write.dstBinding = binding;
-			write.dstArrayElement = 0;
-			write.descriptorCount = 1;
-			write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			write.pBufferInfo = &bufferInfo;
-			writes.push_back(write);
-		}
-
-		if (!writes.empty()) {
-			vkUpdateDescriptorSets(
-			    m_device,
-			    static_cast<uint32_t>(writes.size()),
-			    writes.data(),
-			    0,
-			    nullptr
-			);
-		}
-	}
-
-	m_materials.push_back(std::move(material));
-
+	m_materials.push_back(VulkanMaterial(m_device, materialInfo));
 	return MaterialHandle(static_cast<uint32_t>(m_materials.size() - 1));
-}
-
-void RendererVulkan::DestroyMaterial(MaterialHandle handle) {
-	MaterialVulkan& material = GetMaterialEntry(handle);
-
-	for (auto& [binding, buffers] : material.uniformBuffers) {
-		for (uint32_t frame = 0; frame < cMaxFramesInFlight; ++frame) {
-			const auto& res = buffers[frame];
-			if (res.buffer != VK_NULL_HANDLE) {
-				vkUnmapMemory(m_device, res.bufferMemory);
-				vkDestroyBuffer(m_device, res.buffer, nullptr);
-				vkFreeMemory(m_device, res.bufferMemory, nullptr);
-			}
-		}
-	}
-	material.uniformBuffers.clear();
-
-	if (material.descriptorPool != VK_NULL_HANDLE) {
-		vkDestroyDescriptorPool(m_device, material.descriptorPool, nullptr);
-		material.descriptorPool = VK_NULL_HANDLE;
-	}
-
-	for (auto& entry : material.pipelines) {
-		vkDestroyPipeline(m_device, entry.second, nullptr);
-	}
-	material.pipelines.clear();
-
-	for (VkShaderModule module : material.shaderStages) {
-		vkDestroyShaderModule(m_device, module, nullptr);
-	}
-	material.shaderStages.clear();
-
-	vkDestroyPipelineLayout(m_device, material.pipelineLayout, nullptr);
-	vkDestroyDescriptorSetLayout(m_device, material.descriptorSetLayout, nullptr);
 }
 
 ComputeProgramHandle RendererVulkan::CreateComputeProgram(const char* source) {
@@ -1323,33 +911,6 @@ void RendererVulkan::MemoryBarriersAll() {
 	);
 }
 
-TextureHandle RendererVulkan::GetColorAttachmentHandle(FrameBufferHandle handle) {
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	return fb.colorTexture;
-}
-
-TextureHandle RendererVulkan::GetDepthAttachmentHandle(FrameBufferHandle handle) {
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	return fb.depthTexture;
-}
-
-uint64_t RendererVulkan::GetInternalID(TextureHandle handle) {
-	VulkanTexture& textureEntry = GetTextureEntry(handle);
-	return reinterpret_cast<uint64_t>(textureEntry.image);
-}
-
-uint64_t RendererVulkan::GetInternalColorAttachmentID(FrameBufferHandle handle) {
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	VulkanTexture& texture = GetTextureEntry(fb.colorTexture);
-	return reinterpret_cast<uint64_t>(texture.imageView);
-}
-
-uint64_t RendererVulkan::GetInternalDepthAttachmentID(FrameBufferHandle handle) {
-	FrameBufferVulkan& fb = GetFrameBufferEntry(handle);
-	VulkanTexture& texture = GetTextureEntry(fb.depthTexture);
-	return reinterpret_cast<uint64_t>(texture.imageView);
-}
-
 VkInstance RendererVulkan::GetInstance() const {
 	return m_instance;
 }
@@ -1382,11 +943,11 @@ VulkanTexture& RendererVulkan::GetTextureEntry(TextureHandle handle) {
 	return m_textures[handle.id];
 }
 
-MeshVulkan& RendererVulkan::GetMeshEntry(MeshHandle handle) {
+VulkanMesh& RendererVulkan::GetMeshEntry(MeshHandle handle) {
 	return m_meshes[handle.id];
 }
 
-MaterialVulkan& RendererVulkan::GetMaterialEntry(MaterialHandle handle) {
+VulkanMaterial& RendererVulkan::GetMaterialEntry(MaterialHandle handle) {
 	return m_materials[handle.id];
 }
 
@@ -1394,27 +955,26 @@ ComputeProgramVulkan& RendererVulkan::GetComputeProgramEntry(ComputeProgramHandl
 	return m_computePrograms[handle.id];
 }
 
-UniformBufferVulkan& RendererVulkan::GetUniformBufferEntry(UniformBufferHandle handle) {
+VulkanBuffer& RendererVulkan::GetUniformBufferEntry(UniformBufferHandle handle) {
 	return m_uniformBuffers[handle.id];
 }
 
-ShaderStorageBufferVulkan&
-RendererVulkan::GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle) {
+VulkanBuffer& RendererVulkan::GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle) {
 	return m_shaderStorageBuffers[handle.id];
 }
 
-FrameBufferVulkan& RendererVulkan::GetFrameBufferEntry(FrameBufferHandle handle) {
+VulkanFrameBuffer& RendererVulkan::GetFrameBufferEntry(FrameBufferHandle handle) {
 	return m_frameBuffers[handle.id];
 }
 
 VkImageView RendererVulkan::GetTextureImageView(TextureHandle handle) {
 	VulkanTexture& texture = GetTextureEntry(handle);
-	return texture.imageView;
+	return texture.GetImageView();
 }
 
 VkSampler RendererVulkan::GetTextureSmapler(TextureHandle handle) {
 	VulkanTexture& texture = GetTextureEntry(handle);
-	return texture.sampler;
+	return texture.GetSampler();
 }
 
 void RendererVulkan::CreateInstance() {
@@ -1588,8 +1148,11 @@ void RendererVulkan::CreateSyncObjects() {
 
 void RendererVulkan::RecreateSwapChain() {
 	m_device.WaitIdle();
-	m_device.DestroySwapchain(std::move(m_swapchain));
-	m_swapchain = m_device.CreateSwapchain({ m_surfaceWidth, m_surfaceHeight }, m_renderPass);
+	m_swapchain = std::make_unique<VulkanSwapchain>(
+	    m_device,
+	    VkExtent2D{ m_surfaceWidth, m_surfaceHeight },
+	    m_renderPass
+	);
 }
 
 bool RendererVulkan::CheckValidationLayerSupport() {

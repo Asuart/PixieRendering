@@ -6,7 +6,7 @@
 #include "QueueFamilyIndices.h"
 #include "SwapChainSupportDetails.h"
 #include "VulkanTexture.h"
-#include "FramebufferVulkan.h"
+#include "VulkanFrameBuffer.h"
 
 namespace PixieRenderer {
 
@@ -25,8 +25,9 @@ class VulkanDevice {
 	void Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 	void Cleanup();
 
-	std::unique_ptr<VulkanSwapchain> CreateSwapchain(VkExtent2D extent, VkRenderPass renderPass);
-	void DestroySwapchain(std::unique_ptr<VulkanSwapchain> swapchain);
+	VkPhysicalDevice GetPhysicalDevice() const;
+	VkDevice GetDevice() const;
+	VkSurfaceKHR GetSurface() const;
 
 	void CreateImage(
 	    uint32_t width,
@@ -49,17 +50,6 @@ class VulkanDevice {
 	    VkImageView& outImageView
 	);
 	void DestroyImageView(VkImageView imageView);
-	void CreateSampler(VkSampler& outSampler);
-	void CreateSampler(const VulkanTexture& texture, VkSampler& outSampler);
-	void DestroySampler(VkSampler sampler);
-	void DestroyTexture(VulkanTexture& texture);
-	void GenerateMipmaps(
-	    VkImage image,
-	    VkFormat imageFormat,
-	    int32_t texWidth,
-	    int32_t texHeight,
-	    uint32_t mipLevels
-	);
 
 	void CreateRenderPass(VkFormat format, VkRenderPass& outRenderPass);
 	void DestroyRenderPass(VkRenderPass renderPass);
@@ -70,25 +60,9 @@ class VulkanDevice {
 	void CreateCommandBuffer(VkCommandPool commandPool, VkCommandBuffer& outCommandBuffer);
 	void DestroyCommandBuffer(VkCommandPool commandPool, VkCommandBuffer commandBuffer);
 
-	void CreateBuffer(
-	    VkDeviceSize size,
-	    VkBufferUsageFlags usage,
-	    VkMemoryPropertyFlags properties,
-	    VkBuffer& buffer,
-	    VkDeviceMemory& bufferMemory
-	);
-	void FreeBuffer(VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void LoadBuffer(VkBuffer dstBuffer, VkDeviceSize bufferSize, const void* bufferData);
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
-
-	void CreateFrameBuffer(
-	    uint32_t width,
-	    uint32_t height,
-	    VkFormat format,
-	    FrameBufferVulkan& outFrameBuffer
-	);
-	void DestroyFrameBuffer(FrameBufferVulkan& frameBuffer);
 
 	void CreateFence(VkFence& outFence);
 	void DestroyFence(VkFence fence);

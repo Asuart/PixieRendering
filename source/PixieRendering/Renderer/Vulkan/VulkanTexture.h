@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include "PixieRendering/TextureEnums.h"
+#include "VulkanSampler.h"
 
 namespace PixieRenderer {
 
@@ -11,6 +12,23 @@ class VulkanDevice;
 
 class VulkanTexture {
   public:
+	VulkanTexture(VulkanDevice& parentDevice, uint32_t width, uint32_t height, VkFormat format);
+	~VulkanTexture();
+
+	void Load(uint32_t width, uint32_t height, const void* data, VkFormat format);
+
+	uint32_t GetWidth() const;
+	uint32_t GetHeight() const;
+	VkImageView GetImageView() const;
+	VkSampler GetSampler() const;
+
+	void SetSampler(const std::shared_ptr<VulkanSampler>& sampler);
+	void
+	SetWrap(VkSamplerAddressMode wrapU, VkSamplerAddressMode wrapV, VkSamplerAddressMode wrapW);
+	void SetFiltering(VkFilter minFilter, VkFilter magFilter);
+	void GenerateMipmaps(uint32_t mipLevels);
+
+  private:
 	VulkanDevice& m_device;
 	uint32_t m_width = 0;
 	uint32_t m_height = 0;
@@ -18,51 +36,11 @@ class VulkanTexture {
 	VkImage m_image = VK_NULL_HANDLE;
 	VkDeviceMemory m_memory = VK_NULL_HANDLE;
 	VkImageView m_imageView = VK_NULL_HANDLE;
-	VkSampler m_sampler = VK_NULL_HANDLE;
 	VkFormat m_format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFilter m_minFilter = VK_FILTER_LINEAR;
-	VkFilter m_magFilter = VK_FILTER_LINEAR;
-	VkSamplerAddressMode m_addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	VkSamplerAddressMode m_addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	VkSamplerAddressMode m_addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	std::shared_ptr<VulkanSampler> m_sampler = nullptr;
 
-	VulkanTexture(VulkanDevice& parentDevice);
-	~VulkanTexture();
+	void FreeVkResources();
 };
-
-static inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrap wrap) {
-	switch (wrap) {
-	case TextureWrap::Reapeat:
-		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	case TextureWrap::MirroredRepeat:
-		return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-	case TextureWrap::ClampToEdge:
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case TextureWrap::ClampToBorder:
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-	default:
-		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	}
-}
-
-static inline VkFilter ToVkFilter(TextureFiltering filtering) {
-	switch (filtering) {
-	case TextureFiltering::Linear:
-		return VK_FILTER_LINEAR;
-	case TextureFiltering::Nearest:
-		return VK_FILTER_NEAREST;
-	case TextureFiltering::NearestMipmapNearest:
-		return VK_FILTER_NEAREST;
-	case TextureFiltering::NearestMipmapLinear:
-		return VK_FILTER_NEAREST;
-	case TextureFiltering::LinearMipmapNearest:
-		return VK_FILTER_LINEAR;
-	case TextureFiltering::LinearMipmapLinear:
-		return VK_FILTER_LINEAR;
-	default:
-		return VK_FILTER_LINEAR;
-	}
-}
 
 static inline VkFormat ToVkFormat(TextureFormat format) {
 	switch (format) {
