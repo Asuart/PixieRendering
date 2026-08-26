@@ -245,6 +245,74 @@ void VulkanDevice::DestroyImageView(VkImageView imageView) {
 	vkDestroyImageView(m_device, imageView, nullptr);
 }
 
+void VulkanDevice::CreateSampler(VkSampler& outSampler) {
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.anisotropyEnable = VK_FALSE;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &outSampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create framebuffer color sampler!");
+	}
+}
+
+void VulkanDevice::CreateSampler(const VulkanTexture& texture, VkSampler& outSampler) {
+	VkPhysicalDeviceProperties properties{};
+	vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
+
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = texture.magFilter;
+	samplerInfo.minFilter = texture.minFilter;
+	samplerInfo.addressModeU = texture.addressModeU;
+	samplerInfo.addressModeV = texture.addressModeV;
+	samplerInfo.addressModeW = texture.addressModeW;
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+	samplerInfo.mipLodBias = 0.0f;
+	if (vkCreateSampler(m_device, &samplerInfo, nullptr, &outSampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture sampler!");
+	}
+}
+
+void VulkanDevice::DestroySampler(VkSampler sampler) {
+	vkDestroySampler(m_device, sampler, nullptr);
+}
+
+void VulkanDevice::DestroyTexture(VulkanTexture& texture) {
+	if (texture.sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(m_device, texture.sampler, nullptr);
+		texture.sampler = VK_NULL_HANDLE;
+	}
+	if (texture.imageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(m_device, texture.imageView, nullptr);
+		texture.imageView = VK_NULL_HANDLE;
+	}
+	if (texture.image != VK_NULL_HANDLE) {
+		vkDestroyImage(m_device, texture.image, nullptr);
+		texture.image = VK_NULL_HANDLE;
+	}
+	if (texture.memory != VK_NULL_HANDLE) {
+		vkFreeMemory(m_device, texture.memory, nullptr);
+		texture.memory = VK_NULL_HANDLE;
+	}
+}
+
 void VulkanDevice::GenerateMipmaps(
     VkImage image,
     VkFormat imageFormat,
@@ -576,6 +644,138 @@ void VulkanDevice::CopyBufferToImage(
 	EndSingleTimeCommands(m_commandPool, commandBuffer);
 }
 
+void VulkanDevice::CreateFrameBuffer(
+    uint32_t width,
+    uint32_t height,
+	VkFormat format,
+    FrameBufferVulkan& outFrameBuffer
+) {
+	outFrameBuffer.width = width;
+	outFrameBuffer.height = height;
+
+	VulkanTexture colorTexture;
+	colorTexture.width = width;
+	colorTexture.height = height;
+	colorTexture.format = format;
+
+	VulkanTexture depthTexture;
+	depthTexture.width = width;
+	depthTexture.height = height;
+	depthTexture.format = FindDepthFormat();
+
+	CreateImage(
+	    width,
+	    height,
+	    1,
+	    VK_SAMPLE_COUNT_1_BIT,
+	    colorTexture.format,
+	    VK_IMAGE_TILING_OPTIMAL,
+	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	    colorTexture.image,
+	    colorTexture.memory
+	);
+	CreateImageView(
+	    colorTexture.image,
+	    colorTexture.format,
+	    VK_IMAGE_ASPECT_COLOR_BIT,
+	    1,
+	    colorTexture.imageView
+	);
+	CreateSampler(colorTexture.sampler);
+
+	CreateImage(
+	    width,
+	    height,
+	    1,
+	    VK_SAMPLE_COUNT_1_BIT,
+	    depthTexture.format,
+	    VK_IMAGE_TILING_OPTIMAL,
+	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	    depthTexture.image,
+	    depthTexture.memory
+	);
+	CreateImageView(
+	    depthTexture.image,
+	    depthTexture.format,
+	    VK_IMAGE_ASPECT_DEPTH_BIT,
+	    1,
+	    depthTexture.imageView
+	);
+
+	VkAttachmentDescription colorAttachment{};
+	colorAttachment.format = colorTexture.format;
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkAttachmentDescription depthAttachment{};
+	depthAttachment.format = depthTexture.format;
+	depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference colorAttachmentRef{};
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depthAttachmentRef{};
+	depthAttachmentRef.attachment = 1;
+	depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass{};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentRef;
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+	std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+	VkRenderPassCreateInfo rpInfo{};
+	rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	rpInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	rpInfo.pAttachments = attachments.data();
+	rpInfo.subpassCount = 1;
+	rpInfo.pSubpasses = &subpass;
+
+	VkRenderPass renderPass;
+	if (vkCreateRenderPass(m_device, &rpInfo, nullptr, &renderPass) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create render pass for framebuffer");
+	}
+
+	std::array<VkImageView, 2> fbAttachments = { colorTexture.imageView, depthTexture.imageView };
+	VkFramebufferCreateInfo fbInfo{};
+	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	fbInfo.renderPass = renderPass;
+	fbInfo.attachmentCount = static_cast<uint32_t>(fbAttachments.size());
+	fbInfo.pAttachments = fbAttachments.data();
+	fbInfo.width = width;
+	fbInfo.height = height;
+	fbInfo.layers = 1;
+
+	if (vkCreateFramebuffer(m_device, &fbInfo, nullptr, &outFrameBuffer.framebuffer) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to create framebuffer");
+	}
+
+	outFrameBuffer.renderPass = renderPass;
+	outFrameBuffer.colorTexture = TextureHandle(m_textures.size());
+	m_textures.push_back(colorTexture);
+	outFrameBuffer.depthTexture = TextureHandle(m_textures.size());
+	m_textures.push_back(depthTexture);
+}
+
+void VulkanDevice::DestroyFrameBuffer(FrameBufferVulkan& frameBuffer) {
+
+}
+
 void VulkanDevice::CreateFence(VkFence& outFence) {
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -587,6 +787,19 @@ void VulkanDevice::CreateFence(VkFence& outFence) {
 
 void VulkanDevice::DestroyFence(VkFence fence) {
 	vkDestroyFence(m_device, fence, nullptr);
+}
+
+void VulkanDevice::ResetFences(uint32_t fenceCount, const VkFence* fences) {
+	vkResetFences(m_device, fenceCount, fences);
+}
+
+void VulkanDevice::WaitFences(
+    uint32_t fenceCount,
+    const VkFence* fences,
+    VkBool32 waitAll,
+    uint64_t timeout
+) {
+	vkWaitForFences(m_device, fenceCount, fences, waitAll, timeout);
 }
 
 void VulkanDevice::CreateSemaphore(VkSemaphore& outSemaphore) {
@@ -687,41 +900,6 @@ SwapChainSupportDetails VulkanDevice::QuerySwapChainSupport() const {
 	return QuerySwapChainSupport(m_physicalDevice, m_surface);
 }
 
-void VulkanDevice::CreateLogicalDevice() {
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { m_queueFamilyIndices.graphicsFamily,
-		                                       m_queueFamilyIndices.presentFamily };
-
-	float queuePriority = 1.0f;
-	for (uint32_t queueFamily : uniqueQueueFamilies) {
-		VkDeviceQueueCreateInfo queueCreateInfo{};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-		queueCreateInfos.push_back(queueCreateInfo);
-	}
-
-	VkPhysicalDeviceFeatures deviceFeatures{};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
-
-	VkDeviceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.pEnabledFeatures = &deviceFeatures;
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-	createInfo.enabledLayerCount = 0;
-
-	if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create logical device!");
-	}
-
-	vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily, 0, &m_graphicsQueue);
-	vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentFamily, 0, &m_presentQueue);
-}
-
 uint32_t VulkanDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
@@ -759,6 +937,41 @@ VkFormat VulkanDevice::FindSupportedFormat(
 		}
 	}
 	throw std::runtime_error("failed to find supported format!");
+}
+
+void VulkanDevice::CreateLogicalDevice() {
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { m_queueFamilyIndices.graphicsFamily,
+		                                       m_queueFamilyIndices.presentFamily };
+
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
+
+	VkPhysicalDeviceFeatures deviceFeatures{};
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
+
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.pEnabledFeatures = &deviceFeatures;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+	createInfo.enabledLayerCount = 0;
+
+	if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create logical device!");
+	}
+
+	vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily, 0, &m_graphicsQueue);
+	vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentFamily, 0, &m_presentQueue);
 }
 
 QueueFamilyIndices

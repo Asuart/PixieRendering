@@ -7,20 +7,27 @@
 
 namespace PixieRenderer {
 
-struct TextureVulkan {
-	uint32_t width = 0;
-	uint32_t height = 0;
-	uint32_t mipLevels = 0;
-	VkImage image = VK_NULL_HANDLE;
-	VkDeviceMemory memory = VK_NULL_HANDLE;
-	VkImageView imageView = VK_NULL_HANDLE;
-	VkSampler sampler = VK_NULL_HANDLE;
-	VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-	VkFilter minFilter = VK_FILTER_LINEAR;
-	VkFilter magFilter = VK_FILTER_LINEAR;
-	VkSamplerAddressMode addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	VkSamplerAddressMode addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	VkSamplerAddressMode addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+class VulkanDevice;
+
+class VulkanTexture {
+  public:
+	VulkanDevice& m_device;
+	uint32_t m_width = 0;
+	uint32_t m_height = 0;
+	uint32_t m_mipLevels = 0;
+	VkImage m_image = VK_NULL_HANDLE;
+	VkDeviceMemory m_memory = VK_NULL_HANDLE;
+	VkImageView m_imageView = VK_NULL_HANDLE;
+	VkSampler m_sampler = VK_NULL_HANDLE;
+	VkFormat m_format = VK_FORMAT_R8G8B8A8_SRGB;
+	VkFilter m_minFilter = VK_FILTER_LINEAR;
+	VkFilter m_magFilter = VK_FILTER_LINEAR;
+	VkSamplerAddressMode m_addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	VkSamplerAddressMode m_addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	VkSamplerAddressMode m_addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+	VulkanTexture(VulkanDevice& parentDevice);
+	~VulkanTexture();
 };
 
 static inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrap wrap) {

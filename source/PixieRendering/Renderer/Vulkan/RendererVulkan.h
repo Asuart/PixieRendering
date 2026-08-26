@@ -16,7 +16,7 @@
 #include "QueueFamilyIndices.h"
 #include "ShaderStorageBufferVulkan.h"
 #include "SwapChainSupportDetails.h"
-#include "TextureVulkan.h"
+#include "VulkanTexture.h"
 #include "UniformBufferVulkan.h"
 
 namespace PixieRenderer {
@@ -117,7 +117,7 @@ class RendererVulkan : public IRenderer {
   private: // API
 	// Resources
 	std::vector<MeshVulkan> m_meshes = {};
-	std::vector<TextureVulkan> m_textures = {};
+	std::vector<VulkanTexture> m_textures = {};
 	std::vector<MaterialVulkan> m_materials = {};
 	std::vector<ComputeProgramVulkan> m_computePrograms = {};
 	std::vector<UniformBufferVulkan> m_uniformBuffers = {};
@@ -131,7 +131,7 @@ class RendererVulkan : public IRenderer {
 	std::vector<RenderRequest> m_renderRequests = {};
 	FrameBufferHandle m_activeFrameBuffer = FrameBufferHandle();
 
-	TextureVulkan& GetTextureEntry(TextureHandle handle);
+	VulkanTexture& GetTextureEntry(TextureHandle handle);
 	MeshVulkan& GetMeshEntry(MeshHandle handle);
 	MaterialVulkan& GetMaterialEntry(MaterialHandle handle);
 	ComputeProgramVulkan& GetComputeProgramEntry(ComputeProgramHandle handle);

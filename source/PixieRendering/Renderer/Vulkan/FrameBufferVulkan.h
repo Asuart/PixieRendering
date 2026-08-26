@@ -3,11 +3,13 @@
 
 #include <vulkan/vulkan.h>
 
+#include "VulkanTexture.h"
+
 namespace PixieRenderer {
 
 struct FrameBufferVulkan {
-	TextureHandle colorTexture = {};
-	TextureHandle depthTexture = {};
+	VulkanTexture colorTexture = {};
+	VulkanTexture depthTexture = {};
 	//VkImage colorImage = VK_NULL_HANDLE;
 	//VkDeviceMemory colorImageMemory = VK_NULL_HANDLE;
 	//VkImageView colorImageView = VK_NULL_HANDLE;

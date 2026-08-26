@@ -5,6 +5,8 @@
 
 #include "QueueFamilyIndices.h"
 #include "SwapChainSupportDetails.h"
+#include "VulkanTexture.h"
+#include "FramebufferVulkan.h"
 
 namespace PixieRenderer {
 
@@ -47,6 +49,10 @@ class VulkanDevice {
 	    VkImageView& outImageView
 	);
 	void DestroyImageView(VkImageView imageView);
+	void CreateSampler(VkSampler& outSampler);
+	void CreateSampler(const VulkanTexture& texture, VkSampler& outSampler);
+	void DestroySampler(VkSampler sampler);
+	void DestroyTexture(VulkanTexture& texture);
 	void GenerateMipmaps(
 	    VkImage image,
 	    VkFormat imageFormat,
@@ -76,8 +82,18 @@ class VulkanDevice {
 	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
+	void CreateFrameBuffer(
+	    uint32_t width,
+	    uint32_t height,
+	    VkFormat format,
+	    FrameBufferVulkan& outFrameBuffer
+	);
+	void DestroyFrameBuffer(FrameBufferVulkan& frameBuffer);
+
 	void CreateFence(VkFence& outFence);
 	void DestroyFence(VkFence fence);
+	void ResetFences(uint32_t fenceCount, const VkFence* fences);
+	void WaitFences(uint32_t fenceCount, const VkFence* fences, VkBool32 waitAll, uint64_t timeout);
 
 	void CreateSemaphore(VkSemaphore& outSemaphore);
 	void DestroySemaphore(VkSemaphore semaphore);
@@ -98,8 +114,6 @@ class VulkanDevice {
 	QueueFamilyIndices GetQueueFamilyIndices() const;
 	SwapChainSupportDetails QuerySwapChainSupport() const;
 
-  private:
-	void CreateLogicalDevice();
 	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	VkFormat FindDepthFormat();
 	VkFormat FindSupportedFormat(
@@ -107,6 +121,9 @@ class VulkanDevice {
 	    VkImageTiling tiling,
 	    VkFormatFeatureFlags features
 	);
+
+  private:
+	void CreateLogicalDevice();
 
   public:
 	static QueueFamilyIndices
