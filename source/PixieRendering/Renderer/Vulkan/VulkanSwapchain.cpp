@@ -18,8 +18,11 @@ VulkanSwapchain::VulkanSwapchain(
 
 	VkSurfaceFormatKHR surfaceFormat =
 	    VulkanSwapchain::ChooseSurfaceFormat(swapChainSupport.formats);
+	m_format = surfaceFormat.format;
+
 	VkPresentModeKHR presentMode =
 	    VulkanSwapchain::ChoosePresentMode(swapChainSupport.presentModes);
+
 	m_extent = VulkanSwapchain::ChooseExtent(extent, swapChainSupport.capabilities);
 
 	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -33,7 +36,7 @@ VulkanSwapchain::VulkanSwapchain(
 	createInfo.surface = m_device.GetSurface();
 
 	createInfo.minImageCount = imageCount;
-	createInfo.imageFormat = surfaceFormat.format;
+	createInfo.imageFormat = m_format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
 	createInfo.imageExtent = m_extent;
 	createInfo.imageArrayLayers = 1;
@@ -68,46 +71,52 @@ VulkanSwapchain::VulkanSwapchain(
 		throw std::runtime_error("failed to retrieve swapchain images!");
 	}
 
-	std::vector<VkImageView> swapChainImageViews(m_images.size());
+	m_imageViews.resize(m_images.size());
 	for (uint32_t i = 0; i < m_images.size(); i++) {
 		m_device.CreateImageView(
 		    m_images[i],
-		    surfaceFormat.format,
+		    m_format,
 		    VK_IMAGE_ASPECT_COLOR_BIT,
 		    1,
-		    swapChainImageViews[i]
+		    m_imageViews[i]
 		);
 	}
 
-	VkFormat depthFormat = m_device.FindDepthFormat();
-	VkImage depthImage = VK_NULL_HANDLE;
-	VkImageView depthImageView = VK_NULL_HANDLE;
-	VkDeviceMemory depthImageMemory = VK_NULL_HANDLE;
+	m_depthFormat = m_device.FindDepthFormat();
+	if (m_depthFormat == VK_FORMAT_UNDEFINED) {
+		throw std::runtime_error("No suitable depth format found!");
+	}
 
 	m_device.CreateImage(
 	    m_extent.width,
 	    m_extent.height,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    depthFormat,
+	    m_depthFormat,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    depthImage,
-	    depthImageMemory
+	    m_depthImage,
+	    m_depthImageMemory
 	);
-	m_device.CreateImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1, depthImageView);
+	m_device.CreateImageView(
+	    m_depthImage,
+	    m_depthFormat,
+	    VK_IMAGE_ASPECT_DEPTH_BIT,
+	    1,
+	    m_depthImageView
+	);
 	m_device.TransitionImageLayout(
-	    depthImage,
-	    depthFormat,
+	    m_depthImage,
+	    m_depthFormat,
 	    VK_IMAGE_LAYOUT_UNDEFINED,
 	    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 	    1
 	);
 
-	std::vector<VkFramebuffer> swapChainFramebuffers(swapChainImageViews.size());
-	for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-		std::array<VkImageView, 2> attachments = { swapChainImageViews[i], depthImageView };
+	m_framebuffers.resize(m_imageViews.size());
+	for (size_t i = 0; i < m_imageViews.size(); i++) {
+		std::array<VkImageView, 2> attachments = { m_imageViews[i], m_depthImageView };
 
 		VkFramebufferCreateInfo fbInfo{};
 		fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -118,8 +127,7 @@ VulkanSwapchain::VulkanSwapchain(
 		fbInfo.height = m_extent.height;
 		fbInfo.layers = 1;
 
-		if (vkCreateFramebuffer(device, &fbInfo, nullptr, &swapChainFramebuffers[i]) !=
-		    VK_SUCCESS) {
+		if (vkCreateFramebuffer(device, &fbInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create framebuffer!");
 		}
 	}
@@ -128,23 +136,54 @@ VulkanSwapchain::VulkanSwapchain(
 VulkanSwapchain::~VulkanSwapchain() {
 	VkDevice device = m_device.GetDevice();
 
-	vkDestroyImageView(device, m_depthImageView, nullptr);
-	vkDestroyImage(device, m_depthImage, nullptr);
-	vkFreeMemory(device, m_depthImageMemory, nullptr);
-
-	for (auto framebuffer : m_framebuffers) {
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
+	for (VkFramebuffer framebuffer : m_framebuffers) {
+		if (framebuffer != VK_NULL_HANDLE) {
+			vkDestroyFramebuffer(device, framebuffer, nullptr);
+		}
 	}
 
-	for (auto imageView : m_imageViews) {
-		vkDestroyImageView(device, imageView, nullptr);
+	for (VkImageView imageView : m_imageViews) {
+		if (imageView != VK_NULL_HANDLE) {
+			vkDestroyImageView(device, imageView, nullptr);
+		}
 	}
 
-	vkDestroySwapchainKHR(device, m_swapchain, nullptr);
+	if (m_depthImageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, m_depthImageView, nullptr);
+	}
+	if (m_depthImage != VK_NULL_HANDLE) {
+		vkDestroyImage(device, m_depthImage, nullptr);
+	}
+	if (m_depthImageMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, m_depthImageMemory, nullptr);
+	}
+
+	if (m_swapchain != VK_NULL_HANDLE) {
+		vkDestroySwapchainKHR(device, m_swapchain, nullptr);
+	}
+}
+
+VkExtent2D VulkanSwapchain::GetExtent() const {
+	return m_extent;
+}
+
+VkRenderPass VulkanSwapchain::GetRenderPass() const {
+	return m_renderPass;
 }
 
 VkSwapchainKHR VulkanSwapchain::GetSwapChain() const {
 	return m_swapchain;
+}
+
+VkFormat VulkanSwapchain::GetFormat() const {
+	return m_format;
+}
+
+VkFramebuffer VulkanSwapchain::GetFrameBuffer(uint32_t index) const {
+	if (index >= m_framebuffers.size()) {
+		throw std::out_of_range("Invalid framebuffer index");
+	}
+	return m_framebuffers[index];
 }
 
 VkSurfaceFormatKHR
@@ -158,8 +197,26 @@ VulkanSwapchain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& avai
 	return availableFormats[0];
 }
 
-VkPresentModeKHR VulkanSwapchain::ChoosePresentMode(const std::vector<VkPresentModeKHR>&) {
-	return VK_PRESENT_MODE_FIFO_KHR;
+VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& available) {
+	if (available.size() == 0) {
+		return VK_PRESENT_MODE_FIFO_KHR;
+	}
+	for (VkPresentModeKHR mode : available) {
+		if (mode == VK_PRESENT_MODE_FIFO_KHR) {
+			return mode;
+		}
+	}
+	for (VkPresentModeKHR mode : available) {
+		if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+			return mode;
+		}
+	}
+	for (VkPresentModeKHR mode : available) {
+		if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+			return mode;
+		}
+	}
+	return available[0];
 }
 
 VkExtent2D

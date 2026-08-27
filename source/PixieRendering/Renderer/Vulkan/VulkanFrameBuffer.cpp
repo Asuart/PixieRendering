@@ -10,51 +10,15 @@ VulkanFrameBuffer::VulkanFrameBuffer(
     uint32_t height,
     VkFormat colorFormat
 )
-    : m_device(parentDevice),
-      m_width(width),
-      m_height(height),
-      m_colorFormat(colorFormat),
-      m_depthFormat(m_device.FindDepthFormat()) {
-	m_device.CreateImage(
-	    width,
-	    height,
-	    1,
-	    VK_SAMPLE_COUNT_1_BIT,
-	    m_colorFormat,
-	    VK_IMAGE_TILING_OPTIMAL,
-	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    m_colorImage,
-	    m_colorImageMemory
-	);
-	m_device.CreateImageView(
-	    m_colorImage,
-	    m_colorFormat,
-	    VK_IMAGE_ASPECT_COLOR_BIT,
-	    1,
-	    m_colorImageView
-	);
+    : m_device(parentDevice), m_width(width), m_height(height), m_colorFormat(colorFormat) {
+	m_depthFormat = m_device.FindDepthFormat();
+	if (m_depthFormat == VK_FORMAT_UNDEFINED) {
+		throw std::runtime_error("No suitable depth format found!");
+	}
 
-	m_device.CreateImage(
-	    width,
-	    height,
-	    1,
-	    VK_SAMPLE_COUNT_1_BIT,
-	    m_depthFormat,
-	    VK_IMAGE_TILING_OPTIMAL,
-	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    m_depthImage,
-	    m_depthImageMemory
-	);
-	m_device.CreateImageView(
-	    m_depthImage,
-	    m_depthFormat,
-	    VK_IMAGE_ASPECT_DEPTH_BIT,
-	    1,
-	    m_depthImageView
-	);
 	VkDevice device = m_device.GetDevice();
+
+	CreateImages();
 
 	m_sampler = std::make_unique<VulkanSampler>(m_device);
 
@@ -100,15 +64,14 @@ VulkanFrameBuffer::VulkanFrameBuffer(
 	rpInfo.subpassCount = 1;
 	rpInfo.pSubpasses = &subpass;
 
-	VkRenderPass renderPass;
-	if (vkCreateRenderPass(device, &rpInfo, nullptr, &renderPass) != VK_SUCCESS) {
+	if (vkCreateRenderPass(device, &rpInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to create render pass for framebuffer");
 	}
 
 	std::array<VkImageView, 2> fbAttachments = { m_colorImageView, m_depthImageView };
 	VkFramebufferCreateInfo fbInfo{};
 	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fbInfo.renderPass = renderPass;
+	fbInfo.renderPass = m_renderPass;
 	fbInfo.attachmentCount = static_cast<uint32_t>(fbAttachments.size());
 	fbInfo.pAttachments = fbAttachments.data();
 	fbInfo.width = width;
@@ -123,28 +86,6 @@ VulkanFrameBuffer::VulkanFrameBuffer(
 VulkanFrameBuffer::~VulkanFrameBuffer() {
 	VkDevice device = m_device.GetDevice();
 
-	if (m_colorImageView != VK_NULL_HANDLE) {
-		vkDestroyImageView(device, m_colorImageView, nullptr);
-	}
-	if (m_colorImage != VK_NULL_HANDLE) {
-		vkDestroyImage(device, m_colorImage, nullptr);
-	}
-	if (m_colorImageMemory != VK_NULL_HANDLE) {
-		vkFreeMemory(device, m_colorImageMemory, nullptr);
-	}
-
-	if (m_depthImageView != VK_NULL_HANDLE) {
-		vkDestroyImageView(device, m_depthImageView, nullptr);
-	}
-	if (m_depthImage != VK_NULL_HANDLE) {
-		vkDestroyImage(device, m_depthImage, nullptr);
-	}
-	if (m_depthImageMemory != VK_NULL_HANDLE) {
-		vkFreeMemory(device, m_depthImageMemory, nullptr);
-	}
-
-	m_sampler = nullptr;
-
 	if (m_renderPass != VK_NULL_HANDLE) {
 		vkDestroyRenderPass(device, m_renderPass, nullptr);
 	}
@@ -152,85 +93,141 @@ VulkanFrameBuffer::~VulkanFrameBuffer() {
 	if (m_framebuffer != VK_NULL_HANDLE) {
 		vkDestroyFramebuffer(device, m_framebuffer, nullptr);
 	}
+
+	FreeImages();
+
+	m_sampler.reset();
+}
+
+VkFramebuffer VulkanFrameBuffer::GetFrameBuffer() const {
+	return m_framebuffer;
+}
+
+VkRenderPass VulkanFrameBuffer::GetRenderPass() const {
+	return m_renderPass;
+}
+
+VkSampler VulkanFrameBuffer::GetSampler() const {
+	if (m_sampler == nullptr) {
+		return VK_NULL_HANDLE;
+	}
+	return m_sampler->GetSampler();
+}
+
+VkImageView VulkanFrameBuffer::GetColorImageView() const {
+	return m_colorImageView;
+}
+
+uint32_t VulkanFrameBuffer::GetWidth() const {
+	return m_width;
+}
+
+uint32_t VulkanFrameBuffer::GetHeight() const {
+	return m_height;
 }
 
 void VulkanFrameBuffer::Resize(uint32_t width, uint32_t height) {
-	if (fb.width == resolution.x && fb.height == resolution.y) {
+	if (m_width == width && m_height == height) {
 		return;
 	}
 
-	VulkanTexture& colorTexture = GetTextureEntry(fb.colorTexture);
-	VulkanTexture& depthTexture = GetTextureEntry(fb.depthTexture);
+	VkDevice device = m_device.GetDevice();
 
-	if (fb.framebuffer != VK_NULL_HANDLE) {
-		vkDestroyFramebuffer(m_device, fb.framebuffer, nullptr);
-		fb.framebuffer = VK_NULL_HANDLE;
+	if (m_framebuffer != VK_NULL_HANDLE) {
+		vkDestroyFramebuffer(device, m_framebuffer, nullptr);
+		m_framebuffer = VK_NULL_HANDLE;
 	}
 
-	m_device.DestroyTexture(colorTexture);
-	m_device.DestroyTexture(depthTexture);
+	FreeImages();
 
-	fb.width = resolution.x;
-	fb.height = resolution.y;
+	m_width = width;
+	m_height = height;
 
-	colorTexture.width = resolution.x;
-	colorTexture.height = resolution.y;
+	CreateImages();
 
-	depthTexture.width = resolution.x;
-	depthTexture.height = resolution.y;
+	std::array<VkImageView, 2> attachments = { m_colorImageView, m_depthImageView };
+	VkFramebufferCreateInfo fbInfo{};
+	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	fbInfo.renderPass = m_renderPass;
+	fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	fbInfo.pAttachments = attachments.data();
+	fbInfo.width = width;
+	fbInfo.height = height;
+	fbInfo.layers = 1;
 
+	if (vkCreateFramebuffer(device, &fbInfo, nullptr, &m_framebuffer) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to recreate framebuffer during resize!");
+	}
+}
+
+void VulkanFrameBuffer::CreateImages() {
 	m_device.CreateImage(
-	    resolution.x,
-	    resolution.y,
+	    m_width,
+	    m_height,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    colorTexture.format,
+	    m_colorFormat,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    colorTexture.image,
-	    colorTexture.memory
+	    m_colorImage,
+	    m_colorImageMemory
 	);
 	m_device.CreateImageView(
-	    colorTexture.image,
-	    colorTexture.format,
+	    m_colorImage,
+	    m_colorFormat,
 	    VK_IMAGE_ASPECT_COLOR_BIT,
 	    1,
-	    colorTexture.imageView
+	    m_colorImageView
 	);
 
 	m_device.CreateImage(
-	    resolution.x,
-	    resolution.y,
+	    m_width,
+	    m_height,
 	    1,
 	    VK_SAMPLE_COUNT_1_BIT,
-	    depthTexture.format,
+	    m_depthFormat,
 	    VK_IMAGE_TILING_OPTIMAL,
 	    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-	    depthTexture.image,
-	    depthTexture.memory
+	    m_depthImage,
+	    m_depthImageMemory
 	);
 	m_device.CreateImageView(
-	    depthTexture.image,
-	    depthTexture.format,
+	    m_depthImage,
+	    m_depthFormat,
 	    VK_IMAGE_ASPECT_DEPTH_BIT,
 	    1,
-	    depthTexture.imageView
+	    m_depthImageView
 	);
+}
 
-	std::array<VkImageView, 2> attachments = { colorTexture.imageView, depthTexture.imageView };
-	VkFramebufferCreateInfo fbInfo{};
-	fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	fbInfo.renderPass = fb.renderPass;
-	fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-	fbInfo.pAttachments = attachments.data();
-	fbInfo.width = resolution.x;
-	fbInfo.height = resolution.y;
-	fbInfo.layers = 1;
+void VulkanFrameBuffer::FreeImages() {
+	VkDevice device = m_device.GetDevice();
+	if (m_colorImageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, m_colorImageView, nullptr);
+		m_colorImageView = VK_NULL_HANDLE;
+	}
+	if (m_colorImage != VK_NULL_HANDLE) {
+		vkDestroyImage(device, m_colorImage, nullptr);
+		m_colorImage = VK_NULL_HANDLE;
+	}
+	if (m_colorImageMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, m_colorImageMemory, nullptr);
+		m_colorImageMemory = VK_NULL_HANDLE;
+	}
 
-	if (vkCreateFramebuffer(m_device, &fbInfo, nullptr, &fb.framebuffer) != VK_SUCCESS) {
-		throw std::runtime_error("Failed to recreate framebuffer during resize!");
+	if (m_depthImageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, m_depthImageView, nullptr);
+		m_depthImageView = VK_NULL_HANDLE;
+	}
+	if (m_depthImage != VK_NULL_HANDLE) {
+		vkDestroyImage(device, m_depthImage, nullptr);
+		m_depthImage = VK_NULL_HANDLE;
+	}
+	if (m_depthImageMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, m_depthImageMemory, nullptr);
+		m_depthImageMemory = VK_NULL_HANDLE;
 	}
 }
 

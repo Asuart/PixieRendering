@@ -9,9 +9,9 @@
 #include "VulkanDevice.h"
 #include "VulkanSwapchain.h"
 
-#include "ComputeProgramVulkan.h"
+#include "VulkanComputeProgram.h"
 #include "VulkanFrameBuffer.h"
-#include "VulkanMaterial.h"
+#include "VulkanGraphicsProgram.h"
 #include "VulkanMesh.h"
 #include "QueueFamilyIndices.h"
 #include "SwapChainSupportDetails.h"
@@ -21,18 +21,18 @@
 namespace PixieRenderer {
 
 class RendererVulkan : public IRenderer {
-  public: // API
+  public:
 	RendererVulkan(Window* window);
 
 	void SetRenderResolution(uint32_t width, uint32_t height);
 
-	void StartFrame();
+	bool BeginFrame();
 	void EndFrame();
 
 	void BeginRenderPass();
 	void EndRenderPass();
 
-	MeshHandle CreateMesh(const Mesh* mesh = nullptr);
+	MeshHandle CreateMesh(const Mesh* mesh);
 	void LoadMesh(MeshHandle handle, const Mesh* mesh);
 	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle);
 
@@ -50,7 +50,6 @@ class RendererVulkan : public IRenderer {
 	);
 	void
 	SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
-	void GenerateTextureMipmaps(TextureHandle handle, uint32_t);
 	glm::ivec2 GetTextureResolution(TextureHandle handle);
 	void BindTexture(
 	    MaterialHandle materialHandle,
@@ -99,12 +98,12 @@ class RendererVulkan : public IRenderer {
 	VkCommandBuffer GetCommandBuffer() const;
 	VkRenderPass GetRenderPass() const;
 
-  private: // API
+  private:
 	// Resources
 	std::vector<VulkanMesh> m_meshes = {};
 	std::vector<VulkanTexture> m_textures = {};
-	std::vector<VulkanMaterial> m_materials = {};
-	std::vector<ComputeProgramVulkan> m_computePrograms = {};
+	std::vector<VulkanGraphicsProgram> m_materials = {};
+	std::vector<VulkanComputeProgram> m_computePrograms = {};
 	std::vector<VulkanBuffer> m_uniformBuffers = {};
 	std::vector<VulkanBuffer> m_shaderStorageBuffers = {};
 	std::vector<VulkanFrameBuffer> m_frameBuffers = {};
@@ -118,36 +117,29 @@ class RendererVulkan : public IRenderer {
 
 	VulkanTexture& GetTextureEntry(TextureHandle handle);
 	VulkanMesh& GetMeshEntry(MeshHandle handle);
-	VulkanMaterial& GetMaterialEntry(MaterialHandle handle);
-	ComputeProgramVulkan& GetComputeProgramEntry(ComputeProgramHandle handle);
+	VulkanGraphicsProgram& GetMaterialEntry(MaterialHandle handle);
+	VulkanComputeProgram& GetComputeProgramEntry(ComputeProgramHandle handle);
 	VulkanBuffer& GetUniformBufferEntry(UniformBufferHandle handle);
 	VulkanBuffer& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
 	VulkanFrameBuffer& GetFrameBufferEntry(FrameBufferHandle handle);
 
   public:
 	VkImageView GetTextureImageView(TextureHandle handle);
-	VkSampler GetTextureSmapler(TextureHandle handle);
+	VkSampler GetTextureSampler(TextureHandle handle);
 
-  public: // BACKEND
-	static constexpr uint32_t cMaxFramesInFlight = 3;
-
-  private: // BACKEND
+  private:
 	VulkanDevice m_device;
 	std::unique_ptr<VulkanSwapchain> m_swapchain = nullptr;
-
-	// General
-	bool m_framebufferResized = false;
-	// Instance
 	VkInstance m_instance = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
-	// Surface
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-	// Render pass
 	VkRenderPass m_renderPass = VK_NULL_HANDLE;
-	// Command pool
+	bool m_framebufferResized = false;
+	bool m_swapchainNeedsRecreate = false;
+
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> m_commandBuffers = {};
-	// Synchronization
+
 	std::vector<VkSemaphore> m_imageAvailableSemaphores = {};
 	std::vector<VkSemaphore> m_renderFinishedSemaphores = {};
 	std::vector<VkFence> m_inFlightFences = {};
@@ -166,39 +158,8 @@ class RendererVulkan : public IRenderer {
 	void InitializeDevice();
 	void CreateSyncObjects();
 
-	void GenerateMipmaps(
-	    VkImage image,
-	    VkFormat imageFormat,
-	    int32_t texWidth,
-	    int32_t texHeight,
-	    uint32_t mipLevels
-	);
-
-	void CreateMaterialDescriptorSetLayout(
-	    const std::vector<ShaderBinding>& bindings,
-	    VkDescriptorSetLayout& outDescriptorSetLayout
-	);
-	void CreateMaterialDescriptorPool(
-	    const std::vector<ShaderBinding>& bindings,
-	    VkDescriptorPool& outDescriptorPool
-	);
-	void CreateMaterialPipelineLayout(
-	    VkDescriptorSetLayout descriptorSetLayout,
-	    VkPipelineLayout& outPipelineLayout
-	);
-	void CreateMaterialPipeline(
-	    VkPipelineLayout pipelineLayout,
-	    VkRenderPass renderPass,
-	    const VkPipelineShaderStageCreateInfo* shaderStages,
-	    uint32_t shaderStagesCount,
-	    VkPipeline& outPipeline
-	);
-
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	bool CheckValidationLayerSupport();
-
-	static std::vector<VkVertexInputBindingDescription> GetMeshBindingDescriptions();
-	static std::vector<VkVertexInputAttributeDescription> GetMeshAttributeDescriptions();
 };
 
 } // namespace PixieRenderer

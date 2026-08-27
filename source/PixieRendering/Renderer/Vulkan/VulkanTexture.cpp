@@ -10,30 +10,35 @@ namespace PixieRenderer {
 
 VulkanTexture::VulkanTexture(
     VulkanDevice& parentDevice,
-    uint32_t width,
-    uint32_t height,
-    VkFormat format
+    const Image2D* image,
+    uint32_t mipmapLevels
 )
-    : m_device(parentDevice), m_width(width), m_height(height), m_format(format) {
+    : m_device(parentDevice) {
+	if (image != nullptr) {
+		Load(image, mipmapLevels);
+	}
 }
 
 VulkanTexture::~VulkanTexture() {
-	FreeVkResources();
+	Free();
 }
 
-void VulkanTexture::Load(uint32_t width, uint32_t height, const void* data, VkFormat format) {
-	FreeVkResources();
+void VulkanTexture::Load(const Image2D* image, uint32_t mipmapLevels) {
+	if (!image) {
+		throw std::invalid_argument("image is null");
+	}
 
-	m_format = format;
-	m_width = width;
-	m_height = height;
-	m_format = format;
+	Free();
+
+	m_width = image->resolution.x;
+	m_height = image->resolution.y;
+	m_format = ToVkFormat(image->format);
 
 	uint32_t maxMipLevels =
-	    static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
-	m_mipLevels = maxMipLevels;
+	    static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))) + 1;
+	m_mipLevels = std::clamp(mipmapLevels, 1u, maxMipLevels);
 
-	VkDeviceSize imageSize = width * height * 4;
+	VkDeviceSize imageSize = m_width * m_height * FormatToByteSize(image->format);
 	VulkanBuffer stagingBuffer(
 	    m_device,
 	    imageSize,
@@ -41,7 +46,7 @@ void VulkanTexture::Load(uint32_t width, uint32_t height, const void* data, VkFo
 	    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 	);
 
-	stagingBuffer.Load(imageSize, data);
+	stagingBuffer.Load(image->pixels.data(), imageSize);
 
 	m_device.CreateImage(
 	    m_width,
@@ -67,10 +72,42 @@ void VulkanTexture::Load(uint32_t width, uint32_t height, const void* data, VkFo
 
 	m_device.CopyBufferToImage(stagingBuffer.GetBuffer(), m_image, m_width, m_height);
 
-	GenerateMipmaps(m_mipLevels);
-
 	m_device
 	    .CreateImageView(m_image, m_format, VK_IMAGE_ASPECT_COLOR_BIT, m_mipLevels, m_imageView);
+
+	GenerateMipmaps();
+
+	if (m_mipLevels == 1) {
+		m_device.TransitionImageLayout(
+		    m_image,
+		    m_format,
+		    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		    1
+		);
+	}
+}
+
+void VulkanTexture::Free() {
+	VkDevice device = m_device.GetDevice();
+
+	m_width = 0;
+	m_height = 0;
+	m_mipLevels = 0;
+	m_format = VK_FORMAT_UNDEFINED;
+
+	if (m_imageView != VK_NULL_HANDLE) {
+		vkDestroyImageView(device, m_imageView, nullptr);
+		m_imageView = VK_NULL_HANDLE;
+	}
+	if (m_image != VK_NULL_HANDLE) {
+		vkDestroyImage(device, m_image, nullptr);
+		m_image = VK_NULL_HANDLE;
+	}
+	if (m_memory != VK_NULL_HANDLE) {
+		vkFreeMemory(device, m_memory, nullptr);
+		m_memory = VK_NULL_HANDLE;
+	}
 }
 
 uint32_t VulkanTexture::GetWidth() const {
@@ -79,6 +116,14 @@ uint32_t VulkanTexture::GetWidth() const {
 
 uint32_t VulkanTexture::GetHeight() const {
 	return m_height;
+}
+
+uint32_t VulkanTexture::GetMipLevels() const {
+	return m_mipLevels;
+}
+
+VkFormat VulkanTexture::GetFormat() const {
+	return m_format;
 }
 
 VkImageView VulkanTexture::GetImageView() const {
@@ -101,29 +146,33 @@ void VulkanTexture::SetWrap(
 	if (m_sampler == nullptr) {
 		return;
 	}
-	if (m_sampler.use_count() > 1) {
-		m_sampler = std::make_shared<VulkanSampler>(*m_sampler);
-	}
 	m_sampler->SetWrap(wrapU, wrapV, wrapW);
 }
 
-void VulkanTexture::SetFiltering(VkFilter minFilter, VkFilter magFilter) {
+void VulkanTexture::SetFiltering(
+    VkFilter minFilter,
+    VkFilter magFilter,
+    VkSamplerMipmapMode mipmapMode
+) {
 	if (m_sampler == nullptr) {
 		return;
 	}
-	if (m_sampler.use_count() > 1) {
-		m_sampler = std::make_shared<VulkanSampler>(*m_sampler);
-	}
-	m_sampler->SetFiltering(minFilter, magFilter);
+	m_sampler->SetFiltering(minFilter, magFilter, mipmapMode);
 }
 
-void VulkanTexture::GenerateMipmaps(uint32_t mipLevels) {
-	if (mipLevels == m_mipLevels) {
+void VulkanTexture::SetAnisatropy(bool state) {
+	if (m_sampler == nullptr) {
+		return;
+	}
+	m_sampler->SetAnisotropy(state);
+}
+
+void VulkanTexture::GenerateMipmaps() {
+	if (m_mipLevels <= 1) {
 		return;
 	}
 
 	VkPhysicalDevice physicalDevice = m_device.GetPhysicalDevice();
-	VkDevice device = m_device.GetDevice();
 
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(physicalDevice, m_format, &formatProperties);
@@ -153,7 +202,7 @@ void VulkanTexture::GenerateMipmaps(uint32_t mipLevels) {
 	int32_t mipWidth = m_width;
 	int32_t mipHeight = m_height;
 
-	for (uint32_t i = 1; i < mipLevels; i++) {
+	for (uint32_t i = 1; i < m_mipLevels; i++) {
 		barrier.subresourceRange.baseMipLevel = i - 1;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -226,7 +275,7 @@ void VulkanTexture::GenerateMipmaps(uint32_t mipLevels) {
 		}
 	}
 
-	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+	barrier.subresourceRange.baseMipLevel = m_mipLevels - 1;
 	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -245,25 +294,7 @@ void VulkanTexture::GenerateMipmaps(uint32_t mipLevels) {
 	    &barrier
 	);
 
-	m_mipLevels = mipLevels;
-
 	m_device.EndSingleTimeCommands(commandBuffer);
-}
-
-void VulkanTexture::FreeVkResources() {
-	VkDevice device = m_device.GetDevice();
-	if (m_imageView != VK_NULL_HANDLE) {
-		vkDestroyImageView(device, m_imageView, nullptr);
-		m_imageView = VK_NULL_HANDLE;
-	}
-	if (m_image != VK_NULL_HANDLE) {
-		vkDestroyImage(device, m_image, nullptr);
-		m_image = VK_NULL_HANDLE;
-	}
-	if (m_memory != VK_NULL_HANDLE) {
-		vkFreeMemory(device, m_memory, nullptr);
-		m_memory = VK_NULL_HANDLE;
-	}
 }
 
 } // namespace PixieRenderer

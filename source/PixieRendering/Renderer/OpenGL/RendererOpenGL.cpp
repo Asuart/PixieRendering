@@ -27,8 +27,9 @@ void RendererOpenGL::SetRenderResolution(uint32_t width, uint32_t height) {
 	glViewport(0, 0, width, height);
 }
 
-void RendererOpenGL::StartFrame() {
+bool RendererOpenGL::BeginFrame() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	return false;
 }
 
 void RendererOpenGL::EndFrame() {
@@ -132,16 +133,16 @@ MeshHandle RendererOpenGL::CreateMesh(const Mesh* mesh) {
 	return MeshHandle(static_cast<int32_t>(m_meshes.size() - 1));
 }
 
-void RendererOpenGL::DestroyMesh(MeshHandle handle) {
-	MeshOpenGL& mesh = GetMeshEntry(handle);
-	mesh.indexesCount = 0;
-	glDeleteBuffers(1, &mesh.vertexBuffer);
-	mesh.vertexBuffer = 0;
-	glDeleteBuffers(1, &mesh.indexBuffer);
-	mesh.indexBuffer = 0;
-	glDeleteVertexArrays(1, &mesh.vertexArrayObject);
-	mesh.vertexArrayObject = 0;
-}
+//void RendererOpenGL::DestroyMesh(MeshHandle handle) {
+//	MeshOpenGL& mesh = GetMeshEntry(handle);
+//	mesh.indexesCount = 0;
+//	glDeleteBuffers(1, &mesh.vertexBuffer);
+//	mesh.vertexBuffer = 0;
+//	glDeleteBuffers(1, &mesh.indexBuffer);
+//	mesh.indexBuffer = 0;
+//	glDeleteVertexArrays(1, &mesh.vertexArrayObject);
+//	mesh.vertexArrayObject = 0;
+//}
 
 void RendererOpenGL::LoadMesh(MeshHandle handle, const Mesh* mesh) {
 	MeshOpenGL& meshEntry = GetMeshEntry(handle);
@@ -250,15 +251,15 @@ void RendererOpenGL::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 	// }
 }
 
-FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::uvec2 resolution) {
+FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::uvec2 resolution, TextureFormat /*format*/) {
 	m_frameBuffers.push_back(FrameBufferOpenGL(resolution));
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
 
-void RendererOpenGL::DestroyFrameBuffer(FrameBufferHandle handle) {
-	FrameBufferOpenGL frameBuffer = GetFrameBufferEntry(handle);
-	// TODO: destroy
-}
+//void RendererOpenGL::DestroyFrameBuffer(FrameBufferHandle handle) {
+//	FrameBufferOpenGL frameBuffer = GetFrameBufferEntry(handle);
+//	// TODO: destroy
+//}
 
 void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
 	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
@@ -394,11 +395,11 @@ TextureHandle RendererOpenGL::CreateTexture(const Image2D* image) {
 	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 }
 
-void RendererOpenGL::DestroyTexture(TextureHandle handle) {
-	TextureOpenGL& texture = GetTextureEntry(handle);
-	glDeleteTextures(1, &texture.id);
-	texture.id = 0;
-}
+//void RendererOpenGL::DestroyTexture(TextureHandle handle) {
+//	TextureOpenGL& texture = GetTextureEntry(handle);
+//	glDeleteTextures(1, &texture.id);
+//	texture.id = 0;
+//}
 
 void RendererOpenGL::LoadTexture(TextureHandle handle, const Image2D* image) {
 	TextureOpenGL& entry = GetTextureEntry(handle);
@@ -580,12 +581,12 @@ RendererOpenGL::CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) {
 	return ShaderStorageBufferHandle(m_shaderStorageBuffers.size() - 1);
 }
 
-void RendererOpenGL::DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) {
-	ShaderStorageBufferOpenGL& buffer = GetShaderStorageBufferEntry(handle);
-	glDeleteBuffers(1, &buffer.id);
-	buffer.id = 0;
-	buffer.size = 0;
-}
+//void RendererOpenGL::DestroyShaderStorageBuffer(ShaderStorageBufferHandle handle) {
+//	ShaderStorageBufferOpenGL& buffer = GetShaderStorageBufferEntry(handle);
+//	glDeleteBuffers(1, &buffer.id);
+//	buffer.id = 0;
+//	buffer.size = 0;
+//}
 
 void RendererOpenGL::LoadShaderStorageBuffer(
     ShaderStorageBufferHandle handle,
@@ -630,12 +631,12 @@ UniformBufferHandle RendererOpenGL::CreateUniformBuffer(const uint8_t* data, uin
 	return UniformBufferHandle(m_uniformBuffers.size() - 1);
 }
 
-void RendererOpenGL::DestroyUniformBuffer(UniformBufferHandle handle) {
-	UniformBufferOpenGL& buffer = GetUniformBufferEntry(handle);
-	glDeleteBuffers(1, &buffer.id);
-	buffer.id = 0;
-	buffer.size = 0;
-}
+//void RendererOpenGL::DestroyUniformBuffer(UniformBufferHandle handle) {
+//	UniformBufferOpenGL& buffer = GetUniformBufferEntry(handle);
+//	glDeleteBuffers(1, &buffer.id);
+//	buffer.id = 0;
+//	buffer.size = 0;
+//}
 
 void RendererOpenGL::LoadUniformBuffer(
     UniformBufferHandle handle,
@@ -672,11 +673,11 @@ MaterialHandle RendererOpenGL::CreateMaterial(const Material* materialInfo) {
 	return MaterialHandle(m_shaders.size() - 1);
 }
 
-void RendererOpenGL::DestroyMaterial(MaterialHandle handle) {
-	MaterialOpenGL& shader = GetShaderEntry(handle);
-	glDeleteProgram(shader.id);
-	shader.id = 0;
-}
+//void RendererOpenGL::DestroyMaterial(MaterialHandle handle) {
+//	MaterialOpenGL& shader = GetShaderEntry(handle);
+//	glDeleteProgram(shader.id);
+//	shader.id = 0;
+//}
 
 ComputeProgramHandle RendererOpenGL::CreateComputeProgram(const char* source) {
 	ComputeShaderOpenGL computeShaderEntry = CompileComputeShaderOpenGL(source);
@@ -684,11 +685,11 @@ ComputeProgramHandle RendererOpenGL::CreateComputeProgram(const char* source) {
 	return ComputeProgramHandle(m_computeShaders.size() - 1);
 }
 
-void RendererOpenGL::DestroyComputeProgram(ComputeProgramHandle handle) {
-	ComputeShaderOpenGL computeProgram = GetComputeShaderEntry(handle);
-	glDeleteProgram(computeProgram.id);
-	computeProgram.id = 0;
-}
+//void RendererOpenGL::DestroyComputeProgram(ComputeProgramHandle handle) {
+//	ComputeShaderOpenGL computeProgram = GetComputeShaderEntry(handle);
+//	glDeleteProgram(computeProgram.id);
+//	computeProgram.id = 0;
+//}
 
 void RendererOpenGL::DispatchComputeProgram(
     ComputeProgramHandle handle,
@@ -714,30 +715,30 @@ void RendererOpenGL::MemoryBarriersAll() {
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) {
-	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
-	return TextureHandle(fb.GetColorHandle());
-}
-
-TextureHandle RendererOpenGL::GetDepthAttachmentHandle(FrameBufferHandle handle) {
-	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
-	return TextureHandle(fb.GetDepthHandle());
-}
-
-uint64_t RendererOpenGL::GetInternalID(TextureHandle handle) {
-	TextureOpenGL& textureEntry = GetTextureEntry(handle);
-	return textureEntry.id;
-}
-
-uint64_t RendererOpenGL::GetInternalColorAttachmentID(FrameBufferHandle handle) {
-	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
-	return frameBufferEntry.GetColorHandle();
-}
-
-uint64_t RendererOpenGL::GetInternalDepthAttachmentID(FrameBufferHandle handle) {
-	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
-	return frameBufferEntry.GetDepthHandle();
-}
+//TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) {
+//	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
+//	return TextureHandle(fb.GetColorHandle());
+//}
+//
+//TextureHandle RendererOpenGL::GetDepthAttachmentHandle(FrameBufferHandle handle) {
+//	FrameBufferOpenGL& fb = GetFrameBufferEntry(handle);
+//	return TextureHandle(fb.GetDepthHandle());
+//}
+//
+//uint64_t RendererOpenGL::GetInternalID(TextureHandle handle) {
+//	TextureOpenGL& textureEntry = GetTextureEntry(handle);
+//	return textureEntry.id;
+//}
+//
+//uint64_t RendererOpenGL::GetInternalColorAttachmentID(FrameBufferHandle handle) {
+//	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
+//	return frameBufferEntry.GetColorHandle();
+//}
+//
+//uint64_t RendererOpenGL::GetInternalDepthAttachmentID(FrameBufferHandle handle) {
+//	FrameBufferOpenGL& frameBufferEntry = GetFrameBufferEntry(handle);
+//	return frameBufferEntry.GetDepthHandle();
+//}
 
 TextureOpenGL& RendererOpenGL::GetTextureEntry(TextureHandle handle) {
 	return m_textures[handle.id];

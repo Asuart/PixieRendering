@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include "../../Resources/Mesh.h"
+#include "VulkanBuffer.h"
 
 namespace PixieRenderer {
 
@@ -11,18 +12,27 @@ class VulkanDevice;
 
 class VulkanMesh {
   public:
-	VulkanMesh(VulkanDevice& parentDevice);
+	VulkanMesh(VulkanDevice& parentDevice, const Mesh* mesh);
 	~VulkanMesh();
 
+	const VulkanBuffer& GetVertexBuffer() const;
+	const VulkanBuffer& GetIndexBuffer() const;
+	uint32_t GetIndexCount() const;
+	uint32_t GetVertexCount() const;
+
 	void Load(const Mesh* mesh);
+	void Free();
 
   private:
 	VulkanDevice& m_device;
-	VkBuffer m_vertexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory m_vertexBufferMemory = VK_NULL_HANDLE;
-	VkBuffer m_indexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory m_indexBufferMemory = VK_NULL_HANDLE;
-	uint32_t m_indicesCount = 0;
+	VulkanBuffer m_vertexBuffer;
+	VulkanBuffer m_indexBuffer;
+	uint32_t m_indexCount = 0;
+	uint32_t m_vertexCount = 0;
+
+  public:
+	static std::vector<VkVertexInputBindingDescription> GetBindingDescriptions();
+	static std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions();
 };
 
 } // namespace PixieRenderer

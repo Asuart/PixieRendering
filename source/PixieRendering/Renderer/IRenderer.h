@@ -32,7 +32,7 @@ class IRenderer {
 
 	virtual void SetRenderResolution(uint32_t width, uint32_t height) = 0;
 
-	virtual void StartFrame() = 0;
+	virtual bool BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 
 	virtual void BeginRenderPass() = 0;
@@ -60,7 +60,6 @@ class IRenderer {
 	    TextureWrap wrapV,
 	    TextureWrap wrapW
 	) = 0;
-	virtual void GenerateTextureMipmaps(TextureHandle handle) = 0;
 	virtual glm::ivec2 GetTextureResolution(TextureHandle handle) = 0;
 	virtual void BindTexture(
 	    MaterialHandle materialHandle,

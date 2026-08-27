@@ -2,6 +2,7 @@
 #include <PixieRendering/Window/Window.h>
 #include <PixieRendering/Renderer/IRenderer.h>
 #include <PixieRendering/RenderAPI.h>
+#include <PixieRendering/PixieRendering.h>
 
 namespace PixieApp {
 

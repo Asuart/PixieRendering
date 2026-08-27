@@ -12,7 +12,11 @@ class VulkanSwapchain {
 	VulkanSwapchain(VulkanDevice& parentDevice, VkExtent2D extent, VkRenderPass renderPass);
 	~VulkanSwapchain();
 
+	VkExtent2D GetExtent() const;
+	VkRenderPass GetRenderPass() const;
 	VkSwapchainKHR GetSwapChain() const;
+	VkFormat GetFormat() const;
+	VkFramebuffer GetFrameBuffer(uint32_t index) const;
 
   private:
 	VulkanDevice& m_device;
@@ -24,6 +28,7 @@ class VulkanSwapchain {
 	std::vector<VkImageView> m_imageViews = {};
 	std::vector<VkFramebuffer> m_framebuffers = {};
 
+	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
 	VkImage m_depthImage = VK_NULL_HANDLE;
 	VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
 	VkImageView m_depthImageView = VK_NULL_HANDLE;

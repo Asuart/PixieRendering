@@ -55,13 +55,13 @@ void main()
 class SimplaeSceneApp : public PixieApp::PixieUIApplication {
   public:
 	SimplaeSceneApp() : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
-		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 });
+		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
-		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(
-		    m_renderer,
-		    m_renderer->GetColorAttachmentHandle(m_frameBuffer)
-		));
+		//m_ui->AddWindow(new PixieUI::TextureDisplayWindow(
+		//    m_renderer,
+		//    m_renderer->GetColorAttachmentHandle(m_frameBuffer)
+		//));
 	}
 
   private:

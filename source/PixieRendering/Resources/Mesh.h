@@ -28,6 +28,14 @@ struct Mesh {
 	std::vector<int32_t> indexes;
 
 	Mesh() = default;
+
+	inline uint64_t GetVertexBufferSize() const {
+		return vertexes.size() * sizeof(vertexes[0]);
+	}
+
+	inline uint64_t GetIndexBufferSize() const {
+		return indexes.size() * sizeof(indexes[0]);
+	}
 };
 
 } // namespace PixieRenderer

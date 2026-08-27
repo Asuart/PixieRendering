@@ -23,4 +23,23 @@ enum class TextureFiltering : int32_t {
 
 enum class TextureFormat : int32_t { Red8, RGB8, RGBA8, Red32f, RGB32f, RGBA32f };
 
+static inline uint32_t FormatToByteSize(TextureFormat format) {
+	switch (format) {
+	case TextureFormat::Red8:
+		return 1;
+	case TextureFormat::RGB8:
+		return 3;
+	case TextureFormat::RGBA8:
+		return 4;
+	case TextureFormat::Red32f:
+		return 4;
+	case TextureFormat::RGB32f:
+		return 12;
+	case TextureFormat::RGBA32f:
+		return 16;
+	default:
+		return 16;
+	}
+}
+
 } // namespace PixieRenderer

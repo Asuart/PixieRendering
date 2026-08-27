@@ -3,6 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "../../Resources/Image2D.h"
 #include "PixieRendering/TextureEnums.h"
 #include "VulkanSampler.h"
 
@@ -12,21 +13,24 @@ class VulkanDevice;
 
 class VulkanTexture {
   public:
-	VulkanTexture(VulkanDevice& parentDevice, uint32_t width, uint32_t height, VkFormat format);
+	VulkanTexture(VulkanDevice& parentDevice, const Image2D* image = nullptr, uint32_t mipmapLevels = 1);
 	~VulkanTexture();
 
-	void Load(uint32_t width, uint32_t height, const void* data, VkFormat format);
+	void Load(const Image2D* image, uint32_t mipmapLevels = 1);
+	void Free();
 
 	uint32_t GetWidth() const;
 	uint32_t GetHeight() const;
+	uint32_t GetMipLevels() const;
+	VkFormat GetFormat() const;
 	VkImageView GetImageView() const;
 	VkSampler GetSampler() const;
 
 	void SetSampler(const std::shared_ptr<VulkanSampler>& sampler);
 	void
 	SetWrap(VkSamplerAddressMode wrapU, VkSamplerAddressMode wrapV, VkSamplerAddressMode wrapW);
-	void SetFiltering(VkFilter minFilter, VkFilter magFilter);
-	void GenerateMipmaps(uint32_t mipLevels);
+	void SetFiltering(VkFilter minFilter, VkFilter magFilter, VkSamplerMipmapMode mipmapMode);
+	void SetAnisatropy(bool state);
 
   private:
 	VulkanDevice& m_device;
@@ -36,10 +40,10 @@ class VulkanTexture {
 	VkImage m_image = VK_NULL_HANDLE;
 	VkDeviceMemory m_memory = VK_NULL_HANDLE;
 	VkImageView m_imageView = VK_NULL_HANDLE;
-	VkFormat m_format = VK_FORMAT_R8G8B8A8_SRGB;
+	VkFormat m_format = VK_FORMAT_UNDEFINED;
 	std::shared_ptr<VulkanSampler> m_sampler = nullptr;
 
-	void FreeVkResources();
+	void GenerateMipmaps();
 };
 
 static inline VkFormat ToVkFormat(TextureFormat format) {
@@ -47,7 +51,7 @@ static inline VkFormat ToVkFormat(TextureFormat format) {
 	case TextureFormat::Red8:
 		return VK_FORMAT_R8_SRGB;
 	case TextureFormat::RGB8:
-		return VK_FORMAT_R8G8B8_SRGB;
+		return VK_FORMAT_R8G8B8A8_SRGB;
 	case TextureFormat::RGBA8:
 		return VK_FORMAT_R8G8B8A8_SRGB;
 	case TextureFormat::Red32f:

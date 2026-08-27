@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "VulkanSwapchain.h"
 #include "VulkanBuffer.h"
+#include "VulkanSwapchain.h"
 
 namespace PixieRenderer {
 
@@ -216,10 +216,18 @@ void VulkanDevice::DestroyCommandBuffer(VkCommandPool commandPool, VkCommandBuff
 	vkFreeCommandBuffers(m_device, commandPool, 1, &commandBuffer);
 }
 
-void VulkanDevice::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void VulkanDevice::CopyBuffer(
+    VkBuffer srcBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize size,
+    VkDeviceSize srcOffset,
+    VkDeviceSize dstOffset
+) {
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands(m_commandPool);
 
 	VkBufferCopy copyRegion{};
+	copyRegion.srcOffset = srcOffset;
+	copyRegion.dstOffset = dstOffset;
 	copyRegion.size = size;
 	vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
@@ -328,6 +336,14 @@ void VulkanDevice::EndSingleTimeCommands(VkCommandPool commandPool, VkCommandBuf
 	vkQueueWaitIdle(m_graphicsQueue);
 
 	vkFreeCommandBuffers(m_device, commandPool, 1, &commandBuffer);
+}
+
+VkCommandBuffer VulkanDevice::BeginSingleTimeCommands() {
+	return BeginSingleTimeCommands(m_commandPool);
+}
+
+void VulkanDevice::EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+	EndSingleTimeCommands(m_commandPool, commandBuffer);
 }
 
 void VulkanDevice::TransitionImageLayout(

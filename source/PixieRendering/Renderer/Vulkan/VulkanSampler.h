@@ -16,19 +16,22 @@ class VulkanSampler {
 
 	void
 	SetWrap(VkSamplerAddressMode wrapU, VkSamplerAddressMode wrapV, VkSamplerAddressMode wrapW);
-	void SetFiltering(VkFilter minFilter, VkFilter magFilter);
+	void SetFiltering(VkFilter minFilter, VkFilter magFilter, VkSamplerMipmapMode mipmapMode);
+	void SetAnisotropy(bool state);
 
   private:
 	VulkanDevice& m_device;
 	VkSampler m_sampler = VK_NULL_HANDLE;
 	VkFilter m_minFilter = VK_FILTER_LINEAR;
 	VkFilter m_magFilter = VK_FILTER_LINEAR;
+	VkSamplerMipmapMode m_mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	VkSamplerAddressMode m_addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	VkSamplerAddressMode m_addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	VkSamplerAddressMode m_addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	bool m_anisotropyEnabled = true;
 
 	void CreateVkSampler();
+	void DestroyVkSampler();
 };
 
 static inline VkSamplerAddressMode ToVkSamplerAddressMode(TextureWrap wrap) {
@@ -62,6 +65,25 @@ static inline VkFilter ToVkFilter(TextureFiltering filtering) {
 		return VK_FILTER_LINEAR;
 	default:
 		return VK_FILTER_LINEAR;
+	}
+}
+
+static inline VkSamplerMipmapMode ToVkMipmapMode(TextureFiltering filtering) {
+	switch (filtering) {
+	case TextureFiltering::Linear:
+		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case TextureFiltering::Nearest:
+		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case TextureFiltering::NearestMipmapNearest:
+		return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case TextureFiltering::NearestMipmapLinear:
+		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case TextureFiltering::LinearMipmapNearest:
+		return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case TextureFiltering::LinearMipmapLinear:
+		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	default:
+		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	}
 }
 

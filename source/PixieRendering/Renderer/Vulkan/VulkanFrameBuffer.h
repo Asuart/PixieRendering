@@ -19,6 +19,13 @@ class VulkanFrameBuffer {
 	);
 	~VulkanFrameBuffer();
 
+	VkFramebuffer GetFrameBuffer() const;
+	VkRenderPass GetRenderPass() const;
+	VkSampler GetSampler() const;
+	VkImageView GetColorImageView() const;
+	uint32_t GetWidth() const;
+	uint32_t GetHeight() const;
+
 	void Resize(uint32_t width, uint32_t height);
 
   private:
@@ -36,6 +43,9 @@ class VulkanFrameBuffer {
 	uint32_t m_height = 0;
 	VkFormat m_colorFormat = VK_FORMAT_UNDEFINED;
 	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
+
+	void CreateImages();
+	void FreeImages();
 };
 
 } // namespace PixieRenderer

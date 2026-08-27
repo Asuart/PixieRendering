@@ -1,8 +1,5 @@
 #include "PixieApplication.h"
 
-#include <PixieRendering/PixieRendering.h>
-#include <PixieRendering/RenderAPI.h>
-
 #include "Time/ApplicationTime.h"
 #include "Time/GlobalTimer.h"
 #include "UserInput/UserInput.h"
@@ -34,7 +31,11 @@ void PixieApplication::Start() {
 
 		Time::Update();
 
-		m_renderer->StartFrame();
+		if (!m_renderer->BeginFrame()) {
+			UserInput::Reset();
+			m_window->PollEvents();
+			continue;
+		}
 
 		OnDrawFrame();
 		if (m_renderAPI == RenderAPI::OpenGL) {
@@ -46,12 +47,12 @@ void PixieApplication::Start() {
 		UserInput::Reset();
 		m_window->PollEvents();
 
-		//WindowEvent event;
-		//while (false) {
+		// WindowEvent event;
+		// while (false) {
 		//	m_window->HandleEvent(event);
 		//	UserInput::HandleEvent(event);
 		//	HandleEvent(event);
-		//}
+		// }
 
 		GlobalTimer::StopTimer("Main Loop");
 	}

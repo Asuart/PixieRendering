@@ -5,8 +5,8 @@
 
 #include "QueueFamilyIndices.h"
 #include "SwapChainSupportDetails.h"
-#include "VulkanTexture.h"
 #include "VulkanFrameBuffer.h"
+#include "VulkanTexture.h"
 
 namespace PixieRenderer {
 
@@ -60,8 +60,13 @@ class VulkanDevice {
 	void CreateCommandBuffer(VkCommandPool commandPool, VkCommandBuffer& outCommandBuffer);
 	void DestroyCommandBuffer(VkCommandPool commandPool, VkCommandBuffer commandBuffer);
 
-	void LoadBuffer(VkBuffer dstBuffer, VkDeviceSize bufferSize, const void* bufferData);
-	void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	void CopyBuffer(
+	    VkBuffer srcBuffer,
+	    VkBuffer dstBuffer,
+	    VkDeviceSize size,
+	    VkDeviceSize srcOffset = 0,
+	    VkDeviceSize dstOffset = 0
+	);
 	void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 
 	void CreateFence(VkFence& outFence);
@@ -76,6 +81,8 @@ class VulkanDevice {
 
 	VkCommandBuffer BeginSingleTimeCommands(VkCommandPool commandPool);
 	void EndSingleTimeCommands(VkCommandPool commandPool, VkCommandBuffer commandBuffer);
+	VkCommandBuffer BeginSingleTimeCommands();
+	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
 	void TransitionImageLayout(
 	    VkImage image,

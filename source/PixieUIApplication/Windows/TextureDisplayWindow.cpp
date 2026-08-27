@@ -56,7 +56,7 @@ void main() {
 TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle texture)
     : UIWindow(renderer), m_targetTexture(texture) {
 	m_viewportResolution = { 1280, 720 };
-	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution);
+	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution, TextureFormat::RGBA32f);
 
 	SetTexture(texture);
 
@@ -126,7 +126,7 @@ void TextureDisplayWindow::Draw() {
 void TextureDisplayWindow::SetTexture(TextureHandle texture) {
 	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
 	m_displayTexture = ImGui_ImplVulkan_AddTexture(
-	    renderer->GetTextureSmapler(texture),
+	    renderer->GetTextureSampler(texture),
 	    renderer->GetTextureImageView(texture),
 	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	);

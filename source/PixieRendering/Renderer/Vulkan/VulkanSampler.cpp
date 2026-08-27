@@ -9,10 +9,7 @@ VulkanSampler::VulkanSampler(VulkanDevice& parentDevice) : m_device(parentDevice
 }
 
 VulkanSampler::~VulkanSampler() {
-	VkDevice device = m_device.GetDevice();
-	if (m_sampler != VK_NULL_HANDLE) {
-		vkDestroySampler(device, m_sampler, nullptr);
-	}
+	DestroyVkSampler();
 }
 
 VkSampler VulkanSampler::GetSampler() const {
@@ -24,31 +21,43 @@ void VulkanSampler::SetWrap(
     VkSamplerAddressMode wrapV,
     VkSamplerAddressMode wrapW
 ) {
-	VkDevice device = m_device.GetDevice();
-
-	m_addressModeU = wrapU;
-	m_addressModeV = wrapU;
-	m_addressModeW = wrapW;
-
-	if (m_sampler != VK_NULL_HANDLE) {
-		vkDestroySampler(device, m_sampler, nullptr);
-		m_sampler = VK_NULL_HANDLE;
+	if (m_addressModeU == wrapU && m_addressModeV == wrapV && m_addressModeW == wrapW) {
+		return;
 	}
 
+	m_addressModeU = wrapU;
+	m_addressModeV = wrapV;
+	m_addressModeW = wrapW;
+
+	DestroyVkSampler();
 	CreateVkSampler();
 }
 
-void VulkanSampler::SetFiltering(VkFilter minFilter, VkFilter magFilter) {
-	VkDevice device = m_device.GetDevice();
+void VulkanSampler::SetFiltering(
+    VkFilter minFilter,
+    VkFilter magFilter,
+    VkSamplerMipmapMode mipmapMode
+) {
+	if (m_minFilter == minFilter && m_magFilter == magFilter && m_mipmapMode == mipmapMode) {
+		return;
+	}
 
 	m_minFilter = minFilter;
 	m_magFilter = magFilter;
+	m_mipmapMode = mipmapMode;
 
-	if (m_sampler != VK_NULL_HANDLE) {
-		vkDestroySampler(device, m_sampler, nullptr);
-		m_sampler = VK_NULL_HANDLE;
+	DestroyVkSampler();
+	CreateVkSampler();
+}
+
+void VulkanSampler::SetAnisotropy(bool state) {
+	if (m_anisotropyEnabled == state) {
+		return;
 	}
 
+	m_anisotropyEnabled = state;
+	
+	DestroyVkSampler();
 	CreateVkSampler();
 }
 
@@ -66,7 +75,7 @@ void VulkanSampler::CreateVkSampler() {
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable = VK_FALSE;
 	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipmapMode = m_mipmapMode;
 	samplerInfo.minLod = 0.0f;
 	samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 	samplerInfo.mipLodBias = 0.0f;
@@ -85,6 +94,14 @@ void VulkanSampler::CreateVkSampler() {
 
 	if (vkCreateSampler(device, &samplerInfo, nullptr, &m_sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create texture sampler!");
+	}
+}
+
+void VulkanSampler::DestroyVkSampler() {
+	VkDevice device = m_device.GetDevice();
+	if (m_sampler != VK_NULL_HANDLE) {
+		vkDestroySampler(device, m_sampler, nullptr);
+		m_sampler = VK_NULL_HANDLE;
 	}
 }
 
