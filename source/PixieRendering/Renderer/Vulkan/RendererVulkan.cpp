@@ -267,7 +267,7 @@ void RendererVulkan::EndRenderPass() {
 }
 
 MeshHandle RendererVulkan::CreateMesh(const Mesh* mesh) {
-	m_meshes.push_back(VulkanMesh(m_device, mesh));
+	m_meshes.push_back(std::make_unique<VulkanMesh>(m_device, mesh));
 	return MeshHandle(static_cast<uint32_t>(m_meshes.size() - 1));
 }
 
@@ -281,9 +281,12 @@ void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 }
 
 FrameBufferHandle RendererVulkan::CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format) {
-	m_frameBuffers.push_back(
-	    VulkanFrameBuffer(m_device, resolution.x, resolution.y, ToVkFormat(format))
-	);
+	m_frameBuffers.push_back(std::make_unique<VulkanFrameBuffer>(
+	    m_device,
+	    resolution.x,
+	    resolution.y,
+	    ToVkFormat(format)
+	));
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
 
@@ -301,7 +304,7 @@ void RendererVulkan::UnbindFrameBuffer() {
 }
 
 TextureHandle RendererVulkan::CreateTexture(const Image2D* image) {
-	m_textures.push_back(VulkanTexture(m_device, image));
+	m_textures.push_back(std::make_unique<VulkanTexture>(m_device, image));
 	return TextureHandle(static_cast<int32_t>(m_textures.size() - 1));
 }
 
@@ -363,7 +366,7 @@ void RendererVulkan::BindTexture(
 
 ShaderStorageBufferHandle
 RendererVulkan::CreateShaderStorageBuffer(const uint8_t* data, uint32_t size) {
-	m_shaderStorageBuffers.push_back(VulkanBuffer(
+	m_shaderStorageBuffers.push_back(std::make_unique<VulkanBuffer>(
 	    m_device,
 	    size,
 	    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -430,7 +433,7 @@ std::vector<uint8_t> RendererVulkan::GetShaderStorageBufferData(
 }
 
 UniformBufferHandle RendererVulkan::CreateUniformBuffer(const uint8_t* data, uint32_t size) {
-	m_uniformBuffers.push_back(VulkanBuffer(
+	m_uniformBuffers.push_back(std::make_unique<VulkanBuffer>(
 	    m_device,
 	    size,
 	    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -470,12 +473,16 @@ void RendererVulkan::LoadUniformBuffer(
 }
 
 MaterialHandle RendererVulkan::CreateMaterial(const Material* materialInfo) {
-	m_materials.push_back(VulkanGraphicsProgram(m_device, m_renderPass, materialInfo));
+	m_materials.push_back(
+	    std::make_unique<VulkanGraphicsProgram>(m_device, m_renderPass, materialInfo)
+	);
 	return MaterialHandle(static_cast<uint32_t>(m_materials.size() - 1));
 }
 
 ComputeProgramHandle RendererVulkan::CreateComputeProgram(const char* source) {
-	m_computePrograms.push_back(VulkanComputeProgram(m_device, std::string(source)));
+	m_computePrograms.push_back(
+	    std::make_unique<VulkanComputeProgram>(m_device, std::string(source))
+	);
 	return ComputeProgramHandle(static_cast<uint32_t>(m_computePrograms.size() - 1));
 }
 
@@ -548,31 +555,31 @@ VkRenderPass RendererVulkan::GetRenderPass() const {
 }
 
 VulkanTexture& RendererVulkan::GetTextureEntry(TextureHandle handle) {
-	return m_textures[handle.id];
+	return *m_textures[handle.id];
 }
 
 VulkanMesh& RendererVulkan::GetMeshEntry(MeshHandle handle) {
-	return m_meshes[handle.id];
+	return *m_meshes[handle.id];
 }
 
 VulkanGraphicsProgram& RendererVulkan::GetMaterialEntry(MaterialHandle handle) {
-	return m_materials[handle.id];
+	return *m_materials[handle.id];
 }
 
 VulkanComputeProgram& RendererVulkan::GetComputeProgramEntry(ComputeProgramHandle handle) {
-	return m_computePrograms[handle.id];
+	return *m_computePrograms[handle.id];
 }
 
 VulkanBuffer& RendererVulkan::GetUniformBufferEntry(UniformBufferHandle handle) {
-	return m_uniformBuffers[handle.id];
+	return *m_uniformBuffers[handle.id];
 }
 
 VulkanBuffer& RendererVulkan::GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle) {
-	return m_shaderStorageBuffers[handle.id];
+	return *m_shaderStorageBuffers[handle.id];
 }
 
 VulkanFrameBuffer& RendererVulkan::GetFrameBufferEntry(FrameBufferHandle handle) {
-	return m_frameBuffers[handle.id];
+	return *m_frameBuffers[handle.id];
 }
 
 VkImageView RendererVulkan::GetTextureImageView(TextureHandle handle) {

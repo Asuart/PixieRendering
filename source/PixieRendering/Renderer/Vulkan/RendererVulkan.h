@@ -100,13 +100,13 @@ class RendererVulkan : public IRenderer {
 
   private:
 	// Resources
-	std::vector<VulkanMesh> m_meshes = {};
-	std::vector<VulkanTexture> m_textures = {};
-	std::vector<VulkanGraphicsProgram> m_materials = {};
-	std::vector<VulkanComputeProgram> m_computePrograms = {};
-	std::vector<VulkanBuffer> m_uniformBuffers = {};
-	std::vector<VulkanBuffer> m_shaderStorageBuffers = {};
-	std::vector<VulkanFrameBuffer> m_frameBuffers = {};
+	std::vector<std::unique_ptr<VulkanMesh>> m_meshes = {};
+	std::vector<std::unique_ptr<VulkanTexture>> m_textures = {};
+	std::vector<std::unique_ptr<VulkanGraphicsProgram>> m_materials = {};
+	std::vector<std::unique_ptr<VulkanComputeProgram>> m_computePrograms = {};
+	std::vector<std::unique_ptr<VulkanBuffer>> m_uniformBuffers = {};
+	std::vector<std::unique_ptr<VulkanBuffer>> m_shaderStorageBuffers = {};
+	std::vector<std::unique_ptr<VulkanFrameBuffer>> m_frameBuffers = {};
 	// Frame render order
 	struct RenderRequest {
 		MeshHandle meshHandle;

@@ -16,3 +16,4 @@ add_subdirectory(dependencies)
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(source)
+add_subdirectory(examples)

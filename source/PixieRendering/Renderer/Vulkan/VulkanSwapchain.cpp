@@ -73,13 +73,8 @@ VulkanSwapchain::VulkanSwapchain(
 
 	m_imageViews.resize(m_images.size());
 	for (uint32_t i = 0; i < m_images.size(); i++) {
-		m_device.CreateImageView(
-		    m_images[i],
-		    m_format,
-		    VK_IMAGE_ASPECT_COLOR_BIT,
-		    1,
-		    m_imageViews[i]
-		);
+		m_device
+		    .CreateImageView(m_images[i], m_format, VK_IMAGE_ASPECT_COLOR_BIT, 1, m_imageViews[i]);
 	}
 
 	m_depthFormat = m_device.FindDepthFormat();
@@ -197,7 +192,8 @@ VulkanSwapchain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& avai
 	return availableFormats[0];
 }
 
-VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& available) {
+VkPresentModeKHR VulkanSwapchain::ChoosePresentMode(const std::vector<VkPresentModeKHR>& available
+) {
 	if (available.size() == 0) {
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
