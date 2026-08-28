@@ -33,6 +33,7 @@ class RendererVulkan : public IRenderer {
 	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
 	void BindFrameBuffer(FrameBufferHandle handle) override;
 	void UnbindFrameBuffer() override;
+	glm::uvec2 GetFrameBufferResolution(FrameBufferHandle handle) override;
 
 	TextureHandle CreateTexture(const Image2D* image) override;
 	void LoadTexture(TextureHandle handle, const Image2D* image) override;
@@ -104,6 +105,8 @@ class RendererVulkan : public IRenderer {
 
 	VkImageView GetTextureImageView(TextureHandle handle);
 	VkSampler GetTextureSampler(TextureHandle handle);
+	VkImageView GetFrameBufferColorImageView(FrameBufferHandle handle);
+	VkSampler GetFrameBufferSampler(FrameBufferHandle handle);
 
   private:
 	VulkanInstance m_instance;

@@ -102,6 +102,8 @@ bool RendererVulkan::BeginFrame() {
 
 	m_currentRenderPass = nullptr;
 
+	BeginRenderPass();
+
 	return true;
 }
 
@@ -155,10 +157,7 @@ void RendererVulkan::SetRenderResolution(glm::uvec2 resolution) {
 		return;
 	}
 	m_surfaceResolution = resolution;
-
-	SetViewport({ 0, 0 }, { m_surfaceResolution.x, m_surfaceResolution.y });
-
-	RecreateSwapChain();
+	m_swapchainNeedsRecreate = true;
 }
 
 void RendererVulkan::SetViewport(glm::ivec2 start, glm::uvec2 resolution) {
@@ -199,9 +198,6 @@ void RendererVulkan::LoadMesh(MeshHandle handle, const Mesh* mesh) {
 }
 
 void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) {
-	if (!m_currentRenderPass) {
-		BeginRenderPass();
-	}
 	m_presentRenderPass->AddRenderRequest({ meshHandle, materialHandle });
 }
 
@@ -226,11 +222,19 @@ void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 reso
 void RendererVulkan::BindFrameBuffer(FrameBufferHandle handle) {
 	EndRenderPass();
 	m_activeFrameBuffer = handle;
+	BeginRenderPass();
 }
 
 void RendererVulkan::UnbindFrameBuffer() {
 	EndRenderPass();
 	m_activeFrameBuffer = FrameBufferHandle();
+	BeginRenderPass();
+}
+
+glm::uvec2 RendererVulkan::GetFrameBufferResolution(FrameBufferHandle handle) {
+	VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(handle);
+	VkExtent2D extent = fb.GetExtent();
+	return { extent.width, extent.height };
 }
 
 TextureHandle RendererVulkan::CreateTexture(const Image2D* image) {
@@ -478,6 +482,16 @@ VkSampler RendererVulkan::GetTextureSampler(TextureHandle handle) {
 	return texture.GetSampler();
 }
 
+VkImageView RendererVulkan::GetFrameBufferColorImageView(FrameBufferHandle handle) {
+	VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(handle);
+	return fb.GetColorImageView();
+}
+
+VkSampler RendererVulkan::GetFrameBufferSampler(FrameBufferHandle handle) {
+	VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(handle);
+	return fb.GetSampler();
+}
+
 void RendererVulkan::CreateSyncObjects() {
 	m_imageAvailableSemaphores.resize(cMaxFramesInFlight);
 	m_renderFinishedSemaphores.resize(cMaxFramesInFlight);
@@ -496,6 +510,7 @@ void RendererVulkan::RecreateSwapChain() {
 	    VkExtent2D{ m_surfaceResolution.x, m_surfaceResolution.y },
 	    m_presentRenderPass->GetRenderPass()
 	);
+	SetViewport({ 0, 0 }, { m_surfaceResolution.x, m_surfaceResolution.y });
 }
 
 VulkanRenderPass* RendererVulkan::GetOrCreateRenderPass(

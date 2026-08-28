@@ -58,10 +58,7 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
-		//m_ui->AddWindow(new PixieUI::TextureDisplayWindow(
-		//    m_renderer,
-		//    m_renderer->GetColorAttachmentHandle(m_frameBuffer)
-		//));
+		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(m_renderer, m_frameBuffer));
 	}
 
   private:

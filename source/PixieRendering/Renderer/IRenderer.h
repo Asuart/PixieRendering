@@ -45,6 +45,7 @@ class IRenderer {
 	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) = 0;
 	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
 	virtual void UnbindFrameBuffer() = 0;
+	virtual glm::uvec2 GetFrameBufferResolution(FrameBufferHandle handle) = 0;
 
 	virtual TextureHandle CreateTexture(const Image2D* image) = 0;
 	virtual void LoadTexture(TextureHandle handle, const Image2D* image) = 0;

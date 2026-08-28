@@ -34,6 +34,7 @@ class RendererOpenGL : public IRenderer {
 	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
 	void BindFrameBuffer(FrameBufferHandle handle) override;
 	void UnbindFrameBuffer() override;
+	glm::uvec2 GetFrameBufferResolution(FrameBufferHandle handle) override;
 
 	TextureHandle CreateTexture(const Image2D* image) override;
 	void LoadTexture(TextureHandle handle, const Image2D* image) override;

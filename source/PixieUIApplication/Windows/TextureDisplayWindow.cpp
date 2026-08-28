@@ -75,6 +75,28 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle te
 	m_screenPlane = m_renderer->CreateMesh(&mesh);
 }
 
+
+TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, FrameBufferHandle frameBuffer)
+    : UIWindow(renderer), m_targetFrameBuffer(frameBuffer) {
+	m_viewportResolution = { 1280, 720 };
+	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution, TextureFormat::RGBA32f);
+
+	SetFrameBuffer(frameBuffer);
+
+	Material mat{ VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE };
+	m_shader = m_renderer->CreateMaterial(&mat);
+
+	Mesh mesh;
+	mesh.vertexes = {
+		{ glm::vec3(-1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f) },
+		{ glm::vec3(-1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f) },
+		{ glm::vec3(1.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f) },
+		{ glm::vec3(1.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f) },
+	};
+	mesh.indexes = { 0, 1, 2, 0, 2, 3 };
+
+	m_screenPlane = m_renderer->CreateMesh(&mesh);
+}
 void TextureDisplayWindow::OnBeforeDraw() {
 	if (m_viewportResolution.x == 0 || m_viewportResolution.y == 0) {
 		return;
@@ -88,7 +110,13 @@ void TextureDisplayWindow::OnBeforeDraw() {
 		glm::vec2 size = { 1.0f, 1.0f };
 	} planeUBO;
 
-	float textureAspect = Aspect(m_renderer->GetTextureResolution(m_targetTexture));
+	float textureAspect = 1.0f;
+	if (m_targetTexture) {
+		textureAspect = Aspect(m_renderer->GetTextureResolution(m_targetTexture));
+	} else if (m_frameBuffer) {
+		textureAspect = Aspect(m_renderer->GetFrameBufferResolution(m_frameBuffer));
+	}
+	
 	float viewportAspect = Aspect(m_viewportResolution);
 	if (viewportAspect > textureAspect) {
 		planeUBO.size.x = textureAspect / viewportAspect;
@@ -126,6 +154,15 @@ void TextureDisplayWindow::SetTexture(TextureHandle texture) {
 	m_displayTexture = ImGui_ImplVulkan_AddTexture(
 	    renderer->GetTextureSampler(texture),
 	    renderer->GetTextureImageView(texture),
+	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	);
+}
+
+void TextureDisplayWindow::SetFrameBuffer(FrameBufferHandle frameBuffer) {
+	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
+	m_displayTexture = ImGui_ImplVulkan_AddTexture(
+	    renderer->GetFrameBufferSampler(frameBuffer),
+	    renderer->GetFrameBufferColorImageView(frameBuffer),
 	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	);
 }
