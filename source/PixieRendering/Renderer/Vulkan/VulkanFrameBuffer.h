@@ -8,14 +8,15 @@
 namespace PixieRenderer {
 
 class VulkanDevice;
+class VulkanRenderPass;
 
 class VulkanFrameBuffer {
   public:
 	VulkanFrameBuffer(
 	    VulkanDevice& parentDevice,
-	    uint32_t width,
-	    uint32_t height,
-	    VkFormat colorFormat
+	    VkExtent2D extent,
+	    VkFormat colorFormat,
+	    VulkanRenderPass* renderPass
 	);
 	~VulkanFrameBuffer();
 
@@ -23,10 +24,18 @@ class VulkanFrameBuffer {
 	VkRenderPass GetRenderPass() const;
 	VkSampler GetSampler() const;
 	VkImageView GetColorImageView() const;
-	uint32_t GetWidth() const;
-	uint32_t GetHeight() const;
+	VkExtent2D GetExtent() const;
+	VulkanRenderPass* GetRenderPassObject();
 
-	void Resize(uint32_t width, uint32_t height);
+	VkViewport GetViewport() const;
+	void SetViewport(VkViewport viewport);
+	void ResetViewport();
+
+	VkRect2D GetScissor() const;
+	void SetScissor(VkRect2D scissor);
+	void ResetScissor();
+
+	void Resize(VkExtent2D extent);
 
   private:
 	VulkanDevice& m_device;
@@ -38,11 +47,12 @@ class VulkanFrameBuffer {
 	VkImageView m_depthImageView = VK_NULL_HANDLE;
 	std::unique_ptr<VulkanSampler> m_sampler = nullptr;
 	VkFramebuffer m_framebuffer = VK_NULL_HANDLE;
-	VkRenderPass m_renderPass = VK_NULL_HANDLE;
-	uint32_t m_width = 0;
-	uint32_t m_height = 0;
+	VulkanRenderPass* m_renderPass = nullptr;
 	VkFormat m_colorFormat = VK_FORMAT_UNDEFINED;
 	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
+	VkExtent2D m_extent = { 0, 0 };
+	VkViewport m_viewport = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+	VkRect2D m_scissor = { { 0, 0 }, { 0, 0 } };
 
 	void CreateImages();
 	void FreeImages();

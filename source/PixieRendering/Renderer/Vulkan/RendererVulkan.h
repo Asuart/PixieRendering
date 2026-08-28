@@ -7,16 +7,9 @@
 #include <vulkan/vulkan.h>
 
 #include "VulkanDevice.h"
+#include "VulkanInstance.h"
+#include "VulkanResourceManager.h"
 #include "VulkanSwapchain.h"
-
-#include "VulkanComputeProgram.h"
-#include "VulkanFrameBuffer.h"
-#include "VulkanGraphicsProgram.h"
-#include "VulkanMesh.h"
-#include "QueueFamilyIndices.h"
-#include "SwapChainSupportDetails.h"
-#include "VulkanTexture.h"
-#include "VulkanBuffer.h"
 
 namespace PixieRenderer {
 
@@ -24,117 +17,104 @@ class RendererVulkan : public IRenderer {
   public:
 	RendererVulkan(Window* window);
 
-	void SetRenderResolution(uint32_t width, uint32_t height);
+	bool BeginFrame() override;
+	void EndFrame() override;
 
-	bool BeginFrame();
-	void EndFrame();
+	void SetRenderResolution(glm::uvec2 resolution) override;
+	void SetViewport(glm::ivec2 start, glm::uvec2 resolution) override;
+	void SetScissor(glm::ivec2 start, glm::uvec2 resolution) override;
 
-	void BeginRenderPass();
-	void EndRenderPass();
+	MeshHandle CreateMesh(const Mesh* mesh) override;
+	void LoadMesh(MeshHandle handle, const Mesh* mesh) override;
+	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) override;
 
-	MeshHandle CreateMesh(const Mesh* mesh);
-	void LoadMesh(MeshHandle handle, const Mesh* mesh);
-	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle);
+	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format, bool isPresent)
+	    override;
+	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
+	void BindFrameBuffer(FrameBufferHandle handle) override;
+	void UnbindFrameBuffer() override;
 
-	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format);
-	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution);
-	void BindFrameBuffer(FrameBufferHandle handle);
-	void UnbindFrameBuffer();
-
-	TextureHandle CreateTexture(const Image2D* image);
-	void LoadTexture(TextureHandle handle, const Image2D* image);
+	TextureHandle CreateTexture(const Image2D* image) override;
+	void LoadTexture(TextureHandle handle, const Image2D* image) override;
 	void SetTextureFiltering(
 	    TextureHandle handle,
 	    TextureFiltering minFilter,
 	    TextureFiltering magFilter
-	);
-	void
-	SetTextureWrap(TextureHandle handle, TextureWrap wrapU, TextureWrap wrapV, TextureWrap wrapW);
-	glm::ivec2 GetTextureResolution(TextureHandle handle);
+	) override;
+	void SetTextureWrap(
+	    TextureHandle handle,
+	    TextureWrap wrapU,
+	    TextureWrap wrapV,
+	    TextureWrap wrapW
+	) override;
+	glm::ivec2 GetTextureResolution(TextureHandle handle) override;
 	void BindTexture(
 	    MaterialHandle materialHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
 	    uint32_t index
-	);
+	) override;
 	void BindTexture(
 	    ComputeProgramHandle computeProgramHandle,
 	    const std::string& name,
 	    TextureHandle textureHandle,
 	    uint32_t index
-	);
+	) override;
 
-	ShaderStorageBufferHandle CreateShaderStorageBuffer(const uint8_t* data, uint32_t size);
-	void
-	LoadShaderStorageBuffer(ShaderStorageBufferHandle handle, const uint8_t* data, uint32_t size);
-	uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle);
-	std::vector<uint8_t>
-	GetShaderStorageBufferData(ShaderStorageBufferHandle handle, uint32_t offset, uint32_t size);
+	ShaderStorageBufferHandle CreateShaderStorageBuffer(const uint8_t* data, uint32_t size)
+	    override;
+	void LoadShaderStorageBuffer(
+	    ShaderStorageBufferHandle handle,
+	    const uint8_t* data,
+	    uint32_t size
+	) override;
+	uint32_t GetShaderStorageBufferSize(ShaderStorageBufferHandle handle) override;
+	std::vector<uint8_t> GetShaderStorageBufferData(
+	    ShaderStorageBufferHandle handle,
+	    uint32_t offset,
+	    uint32_t size
+	) override;
 
-	UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size);
-	void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size);
+	UniformBufferHandle CreateUniformBuffer(const uint8_t* data, uint32_t size) override;
+	void LoadUniformBuffer(UniformBufferHandle handle, const uint8_t* data, uint32_t size) override;
 	void LoadUniformBuffer(
 	    MaterialHandle handle,
 	    const std::string& name,
 	    const void* data,
 	    size_t size
-	);
+	) override;
 
-	MaterialHandle CreateMaterial(const Material* material);
+	MaterialHandle CreateMaterial(const Material* material) override;
 
-	ComputeProgramHandle CreateComputeProgram(const char* source);
-	void DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z);
+	ComputeProgramHandle CreateComputeProgram(const char* source) override;
+	void DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z)
+	    override;
 
-	void SetViewport(glm::ivec2 start, glm::ivec2 resolution);
+	void WaitIdle() override;
+	void MemoryBarriersAll() override;
 
-	void WaitIdle();
-	void MemoryBarriersAll();
-
+  public:
 	VkInstance GetInstance() const;
 	VkPhysicalDevice GetPhysicalDevice() const;
 	VkDevice GetDevice() const;
 	VkQueue GetGraphicsQueue() const;
 	VkQueue GetPresentQueue() const;
-	VkCommandBuffer GetCommandBuffer() const;
-	VkRenderPass GetRenderPass() const;
+	VkRenderPass GetPresentRenderPass() const;
+	VkCommandBuffer GetCurrentFrameCommandBuffer() const;
 
-  private:
-	// Resources
-	std::vector<std::unique_ptr<VulkanMesh>> m_meshes = {};
-	std::vector<std::unique_ptr<VulkanTexture>> m_textures = {};
-	std::vector<std::unique_ptr<VulkanGraphicsProgram>> m_materials = {};
-	std::vector<std::unique_ptr<VulkanComputeProgram>> m_computePrograms = {};
-	std::vector<std::unique_ptr<VulkanBuffer>> m_uniformBuffers = {};
-	std::vector<std::unique_ptr<VulkanBuffer>> m_shaderStorageBuffers = {};
-	std::vector<std::unique_ptr<VulkanFrameBuffer>> m_frameBuffers = {};
-	// Frame render order
-	struct RenderRequest {
-		MeshHandle meshHandle;
-		MaterialHandle materialHandle;
-	};
-	std::vector<RenderRequest> m_renderRequests = {};
-	FrameBufferHandle m_activeFrameBuffer = FrameBufferHandle();
-
-	VulkanTexture& GetTextureEntry(TextureHandle handle);
-	VulkanMesh& GetMeshEntry(MeshHandle handle);
-	VulkanGraphicsProgram& GetMaterialEntry(MaterialHandle handle);
-	VulkanComputeProgram& GetComputeProgramEntry(ComputeProgramHandle handle);
-	VulkanBuffer& GetUniformBufferEntry(UniformBufferHandle handle);
-	VulkanBuffer& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
-	VulkanFrameBuffer& GetFrameBufferEntry(FrameBufferHandle handle);
-
-  public:
 	VkImageView GetTextureImageView(TextureHandle handle);
 	VkSampler GetTextureSampler(TextureHandle handle);
 
   private:
+	VulkanInstance m_instance;
 	VulkanDevice m_device;
-	std::unique_ptr<VulkanSwapchain> m_swapchain = nullptr;
-	VkInstance m_instance = VK_NULL_HANDLE;
-	VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
+	VulkanResourceManager m_resourceManager;
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-	VkRenderPass m_renderPass = VK_NULL_HANDLE;
-	bool m_framebufferResized = false;
+	std::unique_ptr<VulkanRenderPass> m_presentRenderPass = nullptr;
+	std::unique_ptr<VulkanSwapchain> m_swapchain = nullptr;
+	std::vector<VkRenderPass> m_renderPasses = {};
+	FrameBufferHandle m_activeFrameBuffer = {};
+	VulkanRenderPass* m_currentRenderPass = nullptr;
 	bool m_swapchainNeedsRecreate = false;
 
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
@@ -146,20 +126,34 @@ class RendererVulkan : public IRenderer {
 	uint32_t m_currentFrame = 0;
 	uint32_t m_nextImageIndex = 0;
 
+	struct RenderPassKey {
+		VkFormat colorFormat;
+		VkImageLayout finalColorLayout;
+
+		bool operator==(const RenderPassKey& other) const {
+			return colorFormat == other.colorFormat && finalColorLayout == other.finalColorLayout;
+		}
+	};
+
+	struct RenderPassKeyHash {
+		std::size_t operator()(const RenderPassKey& key) const {
+			return std::hash<uint32_t>{}(static_cast<uint32_t>(key.colorFormat)) ^
+			       (std::hash<uint32_t>{}(static_cast<uint32_t>(key.finalColorLayout)) << 1);
+		}
+	};
+	std::unordered_map<RenderPassKey, std::unique_ptr<VulkanRenderPass>, RenderPassKeyHash>
+	    m_renderPassCache;
+
 	void InitVulkan();
 	void Cleanup();
 
 	void RecreateSwapChain();
-
-	void CreateInstance();
-	void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-	void SetupDebugMessenger();
-	void CreateSurface();
-	void InitializeDevice();
 	void CreateSyncObjects();
 
-	bool IsDeviceSuitable(VkPhysicalDevice device);
-	bool CheckValidationLayerSupport();
+	VulkanRenderPass* GetOrCreateRenderPass(VkFormat colorFormat, VkImageLayout finalLayout);
+
+	void BeginRenderPass();
+	void EndRenderPass();
 };
 
 } // namespace PixieRenderer

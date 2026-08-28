@@ -19,19 +19,18 @@ class RendererOpenGL : public IRenderer {
 	RendererOpenGL(Window* mainWindow);
 	~RendererOpenGL();
 
-	void SetRenderResolution(uint32_t width, uint32_t height) override;
-
 	bool BeginFrame() override;
 	void EndFrame() override;
 
-	void BeginRenderPass() override;
-	void EndRenderPass() override;
+	void SetRenderResolution(glm::uvec2 resolution) override;
+	void SetViewport(glm::ivec2 start, glm::uvec2 resolution) override;
+	void SetScissor(glm::ivec2 start, glm::uvec2 resolution) override;
 
 	MeshHandle CreateMesh(const Mesh* mesh) override;
 	void LoadMesh(MeshHandle handle, const Mesh* mesh) override;
 	void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) override;
 
-	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format) override;
+	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format, bool) override;
 	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
 	void BindFrameBuffer(FrameBufferHandle handle) override;
 	void UnbindFrameBuffer() override;
@@ -91,8 +90,6 @@ class RendererOpenGL : public IRenderer {
 	ComputeProgramHandle CreateComputeProgram(const char* source) override;
 	void
 	DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z) override;
-
-	void SetViewport(glm::ivec2 start, glm::ivec2 resolution) override;
 
 	void WaitIdle() override;
 	void MemoryBarriersAll() override;

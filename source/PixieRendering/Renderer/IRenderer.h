@@ -22,27 +22,26 @@ class IRenderer {
 
 	virtual ~IRenderer() {};
 
-	Window* GetWindow() const {
+	inline Window* GetWindow() const {
 		return m_window;
 	}
 
-	RenderAPI GetRenderAPI() const {
+	inline RenderAPI GetRenderAPI() const {
 		return m_renderAPI;
 	}
-
-	virtual void SetRenderResolution(uint32_t width, uint32_t height) = 0;
 
 	virtual bool BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 
-	virtual void BeginRenderPass() = 0;
-	virtual void EndRenderPass() = 0;
+	virtual void SetRenderResolution(glm::uvec2 resolution) = 0;
+	virtual void SetViewport(glm::ivec2 start, glm::uvec2 resolution) = 0;
+	virtual void SetScissor(glm::ivec2 start, glm::uvec2 resolution) = 0;
 
 	virtual MeshHandle CreateMesh(const Mesh* mesh) = 0;
 	virtual void LoadMesh(MeshHandle handle, const Mesh* mesh) = 0;
 	virtual void DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) = 0;
 
-	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format) = 0;
+	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format, bool isPresentBuffer = false) = 0;
 	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) = 0;
 	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
 	virtual void UnbindFrameBuffer() = 0;
@@ -104,18 +103,13 @@ class IRenderer {
 	virtual void
 	DispatchComputeProgram(ComputeProgramHandle handle, int32_t x, int32_t y, int32_t z) = 0;
 
-	virtual void SetViewport(glm::ivec2 start, glm::ivec2 resolution) = 0;
-
 	virtual void WaitIdle() = 0;
 	virtual void MemoryBarriersAll() = 0;
 
   protected:
 	Window* m_window = nullptr;
 	RenderAPI m_renderAPI = RenderAPI::Undefined;
-	uint32_t m_surfaceWidth = 0;
-	uint32_t m_surfaceHeight = 0;
-	glm::ivec2 m_viewportStart = { 0, 0 };
-	glm::uvec2 m_viewportResolution = { 0, 0 };
+	glm::uvec2 m_surfaceResolution = { 0, 0 };
 };
 
 } // namespace PixieRenderer

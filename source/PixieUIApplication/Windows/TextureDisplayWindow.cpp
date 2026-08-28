@@ -82,7 +82,6 @@ void TextureDisplayWindow::OnBeforeDraw() {
 
 	m_renderer->ResizeFrameBuffer(m_frameBuffer, m_viewportResolution);
 	m_renderer->BindFrameBuffer(m_frameBuffer);
-	m_renderer->BeginRenderPass();
 
 	struct PlaceUBO {
 		glm::vec2 position = { 0.0f, 0.0f };
@@ -103,7 +102,6 @@ void TextureDisplayWindow::OnBeforeDraw() {
 	//// m_renderer->BindTexture(m_shader, "displayTexture", m_targetTexture, 0);
 	 m_renderer->DrawMesh(m_screenPlane, m_shader);
 
-	m_renderer->EndRenderPass();
 	m_renderer->UnbindFrameBuffer();
 }
 

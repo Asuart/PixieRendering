@@ -69,7 +69,7 @@ void Window::OnResize(glm::ivec2 newSize) {
 	}
 	m_resolution = newSize;
 	if (m_renderer) {
-		m_renderer->SetRenderResolution(newSize.x, newSize.y);
+		m_renderer->SetRenderResolution(newSize);
 	}
 }
 

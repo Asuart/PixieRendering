@@ -23,8 +23,16 @@ RendererOpenGL::RendererOpenGL(Window* mainWindow) : IRenderer(mainWindow, Rende
 RendererOpenGL::~RendererOpenGL() {
 }
 
-void RendererOpenGL::SetRenderResolution(uint32_t width, uint32_t height) {
-	glViewport(0, 0, width, height);
+void RendererOpenGL::SetRenderResolution(glm::uvec2 resolution) {
+	glViewport(0, 0, resolution.x, resolution.y);
+}
+
+void RendererOpenGL::SetViewport(glm::ivec2 start, glm::uvec2 resolution) {
+	glViewport(start.x, start.y, resolution.x, resolution.y);
+}
+
+void RendererOpenGL::SetScissor(glm::ivec2 start, glm::uvec2 resolution) {
+	glScissor(start.x, start.y, resolution.x, resolution.y);
 }
 
 bool RendererOpenGL::BeginFrame() {
@@ -34,12 +42,6 @@ bool RendererOpenGL::BeginFrame() {
 
 void RendererOpenGL::EndFrame() {
 	assert(m_viewportStates.size() == 0);
-}
-
-void RendererOpenGL::BeginRenderPass() {
-}
-
-void RendererOpenGL::EndRenderPass() {
 }
 
 MeshHandle RendererOpenGL::CreateMesh(const Mesh* mesh) {
@@ -251,7 +253,7 @@ void RendererOpenGL::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHand
 	// }
 }
 
-FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::uvec2 resolution, TextureFormat /*format*/) {
+FrameBufferHandle RendererOpenGL::CreateFrameBuffer(glm::uvec2 resolution, TextureFormat /*format*/, bool) {
 	m_frameBuffers.push_back(FrameBufferOpenGL(resolution));
 	return FrameBufferHandle(m_frameBuffers.size() - 1);
 }
@@ -701,10 +703,6 @@ void RendererOpenGL::DispatchComputeProgram(
 	glUseProgram(computeShaderEntry.id);
 	glDispatchCompute(x, y, z);
 	glUseProgram(0);
-}
-
-void RendererOpenGL::SetViewport(glm::ivec2 start, glm::ivec2 resolution) {
-	glViewport(start.x, start.y, resolution.x, resolution.y);
 }
 
 void RendererOpenGL::WaitIdle() {

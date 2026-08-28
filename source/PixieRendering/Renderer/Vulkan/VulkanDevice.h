@@ -28,6 +28,9 @@ class VulkanDevice {
 	VkPhysicalDevice GetPhysicalDevice() const;
 	VkDevice GetDevice() const;
 	VkSurfaceKHR GetSurface() const;
+	VkFormat GetSurfaceFormat() const;
+	VkQueue GetGraphicsQueue() const;
+	VkQueue GetPresentQueue() const;
 
 	void CreateImage(
 	    uint32_t width,
@@ -50,9 +53,6 @@ class VulkanDevice {
 	    VkImageView& outImageView
 	);
 	void DestroyImageView(VkImageView imageView);
-
-	void CreateRenderPass(VkFormat format, VkRenderPass& outRenderPass);
-	void DestroyRenderPass(VkRenderPass renderPass);
 
 	void CreateCommandPool(VkCommandPool& outCommandPool);
 	void DestroyCommandPool(VkCommandPool commandPool);

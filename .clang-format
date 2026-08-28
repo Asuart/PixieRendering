@@ -14,3 +14,8 @@ AllowAllParametersOfDeclarationOnNextLine: false
 
 PackConstructorInitializers: NextLine
 Cpp11BracedListStyle: false
+
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 1000
+PenaltyBreakAssignment: 500
+PenaltyBreakBeforeFirstCallParameter: 500

@@ -9,6 +9,10 @@ struct TextureHandle {
 	TextureHandle() = default;
 	explicit TextureHandle(uint64_t id) : id(id) {
 	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
+	}
 };
 
 struct MeshHandle {
@@ -16,6 +20,10 @@ struct MeshHandle {
 
 	MeshHandle() = default;
 	explicit MeshHandle(uint64_t id) : id(id) {
+	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
 	}
 };
 
@@ -25,6 +33,10 @@ struct MaterialHandle {
 	MaterialHandle() = default;
 	explicit MaterialHandle(uint64_t id) : id(id) {
 	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
+	}
 };
 
 struct ComputeProgramHandle {
@@ -32,6 +44,10 @@ struct ComputeProgramHandle {
 
 	ComputeProgramHandle() = default;
 	explicit ComputeProgramHandle(uint64_t id) : id(id) {
+	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
 	}
 };
 
@@ -41,6 +57,10 @@ struct FrameBufferHandle {
 	FrameBufferHandle() = default;
 	explicit FrameBufferHandle(uint64_t id) : id(id) {
 	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
+	}
 };
 
 struct ShaderStorageBufferHandle {
@@ -49,6 +69,10 @@ struct ShaderStorageBufferHandle {
 	ShaderStorageBufferHandle() = default;
 	explicit ShaderStorageBufferHandle(uint64_t id) : id(id) {
 	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
+	}
 };
 
 struct UniformBufferHandle {
@@ -56,6 +80,10 @@ struct UniformBufferHandle {
 
 	UniformBufferHandle() = default;
 	explicit UniformBufferHandle(uint64_t id) : id(id) {
+	}
+
+	explicit operator bool() const {
+		return id != UINT64_MAX;
 	}
 };
 
