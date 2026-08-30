@@ -16,12 +16,12 @@ VulkanSwapchain::VulkanSwapchain(
 
 	SwapChainSupportDetails swapChainSupport = m_device.QuerySwapChainSupport();
 
-	VkSurfaceFormatKHR surfaceFormat =
-	    VulkanSwapchain::ChooseSurfaceFormat(swapChainSupport.formats);
+	VkSurfaceFormatKHR surfaceFormat = VulkanSwapchain::ChooseSurfaceFormat(swapChainSupport.formats
+	);
 	m_format = surfaceFormat.format;
 
-	VkPresentModeKHR presentMode =
-	    VulkanSwapchain::ChoosePresentMode(swapChainSupport.presentModes);
+	VkPresentModeKHR presentMode = VulkanSwapchain::ChoosePresentMode(swapChainSupport.presentModes
+	);
 
 	m_extent = VulkanSwapchain::ChooseExtent(extent, swapChainSupport.capabilities);
 
@@ -181,8 +181,13 @@ VkFramebuffer VulkanSwapchain::GetFrameBuffer(uint32_t index) const {
 	return m_framebuffers[index];
 }
 
-VkSurfaceFormatKHR
-VulkanSwapchain::ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+uint64_t VulkanSwapchain::GetImageCount() const {
+	return m_images.size();
+}
+
+VkSurfaceFormatKHR VulkanSwapchain::ChooseSurfaceFormat(
+    const std::vector<VkSurfaceFormatKHR>& availableFormats
+) {
 	for (const auto& availableFormat : availableFormats) {
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
 		    availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -215,14 +220,13 @@ VkPresentModeKHR VulkanSwapchain::ChoosePresentMode(const std::vector<VkPresentM
 	return available[0];
 }
 
-VkExtent2D
-VulkanSwapchain::ChooseExtent(VkExtent2D extent, const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D VulkanSwapchain::ChooseExtent(
+    VkExtent2D extent,
+    const VkSurfaceCapabilitiesKHR& capabilities
+) {
 	VkExtent2D actualExtent{};
-	actualExtent.width = std::clamp(
-	    extent.width,
-	    capabilities.minImageExtent.width,
-	    capabilities.maxImageExtent.width
-	);
+	actualExtent.width = std::
+	    clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
 	actualExtent.height = std::clamp(
 	    extent.height,
 	    capabilities.minImageExtent.height,

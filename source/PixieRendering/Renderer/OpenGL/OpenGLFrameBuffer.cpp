@@ -1,8 +1,8 @@
-#include "FrameBufferOpenGL.h"
+#include "OpenGLFrameBuffer.h"
 
 namespace PixieRenderer {
 
-FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) : m_resolution(resolution) {
+OpenGLFrameBuffer::OpenGLFrameBuffer(glm::ivec2 resolution) : m_resolution(resolution) {
 	glCreateFramebuffers(1, &m_frameBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
 
@@ -38,13 +38,13 @@ FrameBufferOpenGL::FrameBufferOpenGL(glm::ivec2 resolution) : m_resolution(resol
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-FrameBufferOpenGL::~FrameBufferOpenGL() {
+OpenGLFrameBuffer::~OpenGLFrameBuffer() {
 	// glDeleteFramebuffers(1, &m_frameBuffer);
 	// glDeleteTextures(1, &m_texture);
 	// glDeleteTextures(1, &m_depth);
 }
 
-void FrameBufferOpenGL::Resize(glm::ivec2 resolution) {
+void OpenGLFrameBuffer::Resize(glm::ivec2 resolution) {
 	if (m_resolution == resolution) {
 		return;
 	}
@@ -66,35 +66,35 @@ void FrameBufferOpenGL::Resize(glm::ivec2 resolution) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-glm::ivec2 FrameBufferOpenGL::GetResolution() const {
+glm::ivec2 OpenGLFrameBuffer::GetResolution() const {
 	return m_resolution;
 }
 
-GLuint FrameBufferOpenGL::GetBufferHandle() const {
+GLuint OpenGLFrameBuffer::GetBufferHandle() const {
 	return m_frameBuffer;
 }
 
-GLuint FrameBufferOpenGL::GetColorHandle() const {
+GLuint OpenGLFrameBuffer::GetColorHandle() const {
 	return m_texture;
 }
 
-GLuint FrameBufferOpenGL::GetDepthHandle() const {
+GLuint OpenGLFrameBuffer::GetDepthHandle() const {
 	return m_depth;
 }
 
-void FrameBufferOpenGL::ResizeViewport() const {
+void OpenGLFrameBuffer::ResizeViewport() const {
 	glViewport(0, 0, m_resolution.x, m_resolution.y);
 }
 
-void FrameBufferOpenGL::Clear() const {
+void OpenGLFrameBuffer::Clear() const {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void FrameBufferOpenGL::Bind() const {
+void OpenGLFrameBuffer::Bind() const {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_frameBuffer);
 }
 
-void FrameBufferOpenGL::Unbind() const {
+void OpenGLFrameBuffer::Unbind() const {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

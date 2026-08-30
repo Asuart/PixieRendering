@@ -3,8 +3,35 @@
 #include <glm/glm.hpp>
 
 #include "PixieRendering/TextureEnums.h"
+#include "PixieRendering/Resources/Image2D.h"
 
 namespace PixieRenderer {
+
+struct OpenGLTexture {
+  public:
+	OpenGLTexture(const Image2D* image);
+	~OpenGLTexture();
+
+	glm::uvec2 GetResolution() const;
+
+	void Load(const Image2D* image);
+	void Bind(uint32_t index);
+	void BindImageTexture(uint32_t index);
+
+	void SetWrap(GLint wrapS, GLint wrapT, GLint wrapR);
+	void SetFiltering(GLint minFilter, GLint magFilter);
+	void GenerateMipmaps();
+
+  private:
+	GLuint m_id = 0;
+	GLint m_internalFormat = GL_RED;
+	glm::ivec2 m_resolution = { 0, 0 };
+	GLint m_wrapS = GL_CLAMP_TO_EDGE;
+	GLint m_wrapT = GL_CLAMP_TO_EDGE;
+	GLint m_wrapR = GL_CLAMP_TO_EDGE;
+	GLint m_minFilter = GL_LINEAR;
+	GLint m_magFilter = GL_LINEAR;
+};
 
 constexpr GLint CastTextureWrapOpenGL(TextureWrap wrap) {
 	switch (wrap) {
@@ -39,11 +66,5 @@ constexpr GLint CastTextureFilteringOpenGL(TextureFiltering filtering) {
 		return GL_LINEAR;
 	}
 }
-
-struct TextureOpenGL {
-	GLuint id = 0;
-	GLint internalFormat = GL_RED;
-	glm::ivec2 resolution = {0, 0};
-};
 
 } // namespace PixieRenderer

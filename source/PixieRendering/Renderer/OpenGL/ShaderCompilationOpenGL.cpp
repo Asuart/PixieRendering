@@ -6,7 +6,7 @@
 
 namespace PixieRenderer {
 
-MaterialOpenGL CompileShaderOpenGL(
+GLuint CompileShaderOpenGL(
     const char* vertexShaderSource,
     const char* framgentShaderSource,
     const char* geometryShaderSource
@@ -73,10 +73,10 @@ MaterialOpenGL CompileShaderOpenGL(
 	glDeleteShader(vertShader);
 	glDeleteShader(fragShader);
 
-	return MaterialOpenGL(program);
+	return program;
 }
 
-ComputeShaderOpenGL CompileComputeShaderOpenGL(const char* computeShaderSource) {
+GLuint CompileOpenGLComputeProgram(const char* computeShaderSource) {
 	GLint result = GL_FALSE;
 	int32_t logLength;
 	GLuint computeShader = glCreateShader(GL_COMPUTE_SHADER);
@@ -103,7 +103,7 @@ ComputeShaderOpenGL CompileComputeShaderOpenGL(const char* computeShaderSource) 
 		std::cerr << std::string_view(&shaderError[0]) << "\n";
 	}
 
-	return ComputeShaderOpenGL(computeProgram);
+	return computeProgram;
 }
 
 } // namespace PixieRenderer

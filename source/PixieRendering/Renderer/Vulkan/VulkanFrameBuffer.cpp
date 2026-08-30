@@ -163,6 +163,13 @@ void VulkanFrameBuffer::CreateImages() {
 	    m_colorImage,
 	    m_colorImageMemory
 	);
+	m_device.TransitionImageLayout(
+	    m_colorImage,
+	    m_colorFormat,
+	    VK_IMAGE_LAYOUT_UNDEFINED,
+	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	    1
+	);
 	m_device.CreateImageView(
 	    m_colorImage,
 	    m_colorFormat,

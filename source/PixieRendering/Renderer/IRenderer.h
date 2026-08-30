@@ -4,7 +4,7 @@
 #include "../Window/Window.h"
 
 #include "PixieRendering/RenderAPI.h"
-#include "PixieRendering/ResourceHandles.h"
+#include "PixieRendering/Resources/ResourceHandles.h"
 #include "PixieRendering/Resources/Image2D.h"
 #include "PixieRendering/Resources/Material.h"
 #include "PixieRendering/Resources/Mesh.h"

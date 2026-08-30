@@ -67,8 +67,8 @@ UIVulkan::UIVulkan(WindowVulkan* mainWindow, bool docking) : UI(mainWindow, dock
 	init_info.Device = renderer->GetDevice();
 	init_info.Queue = renderer->GetGraphicsQueue();
 	init_info.DescriptorPool = imguiPool;
-	init_info.MinImageCount = 2;
-	init_info.ImageCount = 2;
+	init_info.MinImageCount = 3;
+	init_info.ImageCount = 3;
 	init_info.PipelineInfoMain.RenderPass = renderer->GetPresentRenderPass();
 	init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 	init_info.PipelineInfoMain.Subpass = 0;

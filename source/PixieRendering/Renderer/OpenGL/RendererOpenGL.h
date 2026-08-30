@@ -1,13 +1,9 @@
 #pragma once
-#include <vector>
-
 #include "../IRenderer.h"
-#include "FrameBufferOpenGL.h"
-#include "MeshOpenGL.h"
+
+#include "PixieRendering/ResourceManager/ResourceManagerOpenGL.h"
+
 #include "ShaderCompilationOpenGL.h"
-#include "ShaderStorageBufferOpenGL.h"
-#include "TextureOpenGL.h"
-#include "UniformBufferOpenGL.h"
 #include "ViewportStateOpenGL.h"
 
 namespace PixieRenderer {
@@ -96,22 +92,8 @@ class RendererOpenGL : public IRenderer {
 	void MemoryBarriersAll() override;
 
   private:
-	std::vector<TextureOpenGL> m_textures;
-	std::vector<MeshOpenGL> m_meshes;
-	std::vector<FrameBufferOpenGL> m_frameBuffers;
-	std::vector<MaterialOpenGL> m_shaders;
-	std::vector<ComputeShaderOpenGL> m_computeShaders;
+	ResourceManagerOpenGL m_resourceManager = {};
 	std::vector<ViewportStateOpenGL> m_viewportStates;
-	std::vector<ShaderStorageBufferOpenGL> m_shaderStorageBuffers;
-	std::vector<UniformBufferOpenGL> m_uniformBuffers;
-
-	TextureOpenGL& GetTextureEntry(TextureHandle handle);
-	MeshOpenGL& GetMeshEntry(MeshHandle handle);
-	FrameBufferOpenGL& GetFrameBufferEntry(FrameBufferHandle handle);
-	MaterialOpenGL& GetShaderEntry(MaterialHandle handle);
-	ComputeShaderOpenGL& GetComputeShaderEntry(ComputeProgramHandle handle);
-	ShaderStorageBufferOpenGL& GetShaderStorageBufferEntry(ShaderStorageBufferHandle handle);
-	UniformBufferOpenGL& GetUniformBufferEntry(UniformBufferHandle handle);
 
 	void StoreViewportState();
 	void RestoreViewportState();

@@ -3,7 +3,9 @@
 
 #include <vulkan/vulkan.h>
 
-#include "../../ResourceHandles.h"
+#include "PixieRendering/Resources/ResourceHandles.h"
+#include "PixieRendering/ResourceManager/IResourceManager.h"
+
 #include "VulkanFrameBuffer.h"
 #include "VulkanGraphicsProgram.h"
 #include "VulkanMesh.h"
@@ -42,8 +44,8 @@ class VulkanRenderPass {
 		VkRect2D scissor
 	);
 	void Execute(
-	    std::vector<std::unique_ptr<VulkanMesh>>& meshes,
-	    std::vector<std::unique_ptr<VulkanGraphicsProgram>>& materials
+	    std::vector<ResourceEntry<VulkanMesh>>& meshes,
+	    std::vector<ResourceEntry<VulkanGraphicsProgram>>& materials
 	);
 	void End();
 

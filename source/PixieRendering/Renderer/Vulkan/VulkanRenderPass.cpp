@@ -160,12 +160,17 @@ void VulkanRenderPass::Begin(
 }
 
 void VulkanRenderPass::Execute(
-    std::vector<std::unique_ptr<VulkanMesh>>& meshes,
-    std::vector<std::unique_ptr<VulkanGraphicsProgram>>& graphicsPrograms
+    std::vector<ResourceEntry<VulkanMesh>>& meshes,
+    std::vector<ResourceEntry<VulkanGraphicsProgram>>& graphicsPrograms
 ) {
 	for (const RenderRequest& req : m_renderRequests) {
-		const VulkanMesh& mesh = *meshes[req.meshHandle.id];
-		VulkanGraphicsProgram& graphicsProgram = *graphicsPrograms[req.materialHandle.id];
+		if (!req.materialHandle || !req.meshHandle) {
+			continue;
+		}
+		
+		VulkanMesh& mesh = *meshes[req.meshHandle.GetId() & 0xffffffff].resource;
+		VulkanGraphicsProgram&
+		    graphicsProgram = *graphicsPrograms[req.materialHandle.GetId() & 0xffffffff].resource;
 
 		vkCmdBindPipeline(
 		    m_currentCommandBuffer,

@@ -17,6 +17,7 @@ class VulkanSwapchain {
 	VkSwapchainKHR GetSwapChain() const;
 	VkFormat GetFormat() const;
 	VkFramebuffer GetFrameBuffer(uint32_t index) const;
+	uint64_t GetImageCount() const;
 
   private:
 	VulkanDevice& m_device;

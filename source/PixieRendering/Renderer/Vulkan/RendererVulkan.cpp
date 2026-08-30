@@ -52,6 +52,8 @@ void RendererVulkan::InitVulkan() {
 }
 
 void RendererVulkan::Cleanup() {
+	m_device.WaitIdle();
+
 	m_swapchain.reset();
 
 	m_renderPasses.clear();
@@ -114,16 +116,17 @@ void RendererVulkan::EndFrame() {
 		throw std::runtime_error("Failed to record command buffer!");
 	}
 
+	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_nextImageIndex] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
-	VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -136,6 +139,7 @@ void RendererVulkan::EndFrame() {
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = signalSemaphores;
+
 	VkSwapchainKHR swapChains[] = { m_swapchain->GetSwapChain() };
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = swapChains;
@@ -150,6 +154,8 @@ void RendererVulkan::EndFrame() {
 	}
 
 	m_currentFrame = (m_currentFrame + 1) % cMaxFramesInFlight;
+
+	WaitIdle();
 }
 
 void RendererVulkan::SetRenderResolution(glm::uvec2 resolution) {
@@ -198,7 +204,11 @@ void RendererVulkan::LoadMesh(MeshHandle handle, const Mesh* mesh) {
 }
 
 void RendererVulkan::DrawMesh(MeshHandle meshHandle, MaterialHandle materialHandle) {
-	m_presentRenderPass->AddRenderRequest({ meshHandle, materialHandle });
+	if (m_currentRenderPass) {
+		m_currentRenderPass->AddRenderRequest({ meshHandle, materialHandle });
+	} else {
+		m_presentRenderPass->AddRenderRequest({ meshHandle, materialHandle });
+	}
 }
 
 FrameBufferHandle RendererVulkan::CreateFrameBuffer(
@@ -493,23 +503,49 @@ VkSampler RendererVulkan::GetFrameBufferSampler(FrameBufferHandle handle) {
 }
 
 void RendererVulkan::CreateSyncObjects() {
+	uint32_t imageCount = static_cast<uint32_t>(m_swapchain->GetImageCount());
+
 	m_imageAvailableSemaphores.resize(cMaxFramesInFlight);
-	m_renderFinishedSemaphores.resize(cMaxFramesInFlight);
-	m_inFlightFences.resize(cMaxFramesInFlight);
-	for (size_t i = 0; i < cMaxFramesInFlight; i++) {
-		m_device.CreateFence(m_inFlightFences[i]);
+	for (uint32_t i = 0; i < cMaxFramesInFlight; ++i) {
 		m_device.CreateSemaphore(m_imageAvailableSemaphores[i]);
+	}
+
+	m_renderFinishedSemaphores.resize(imageCount);
+	for (uint32_t i = 0; i < imageCount; ++i) {
 		m_device.CreateSemaphore(m_renderFinishedSemaphores[i]);
+	}
+
+	m_inFlightFences.resize(cMaxFramesInFlight);
+	for (uint32_t i = 0; i < cMaxFramesInFlight; ++i) {
+		m_device.CreateFence(m_inFlightFences[i]);
 	}
 }
 
 void RendererVulkan::RecreateSwapChain() {
+	vkQueueWaitIdle(m_device.m_presentQueue);
+	vkQueueWaitIdle(m_device.m_graphicsQueue);
 	m_device.WaitIdle();
+
+	// Уничтожить старые renderFinished семафоры
+	for (VkSemaphore sem : m_renderFinishedSemaphores) {
+		m_device.DestroySemaphore(sem);
+	}
+	m_renderFinishedSemaphores.clear();
+
+	// Пересоздать swapchain
 	m_swapchain = std::make_unique<VulkanSwapchain>(
 	    m_device,
 	    VkExtent2D{ m_surfaceResolution.x, m_surfaceResolution.y },
 	    m_presentRenderPass->GetRenderPass()
 	);
+
+	// Создать новые renderFinished семафоры для нового количества изображений
+	uint32_t imageCount = static_cast<uint32_t>(m_swapchain->GetImageCount());
+	m_renderFinishedSemaphores.resize(imageCount);
+	for (uint32_t i = 0; i < imageCount; ++i) {
+		m_device.CreateSemaphore(m_renderFinishedSemaphores[i]);
+	}
+
 	SetViewport({ 0, 0 }, { m_surfaceResolution.x, m_surfaceResolution.y });
 }
 
@@ -573,6 +609,20 @@ void RendererVulkan::EndRenderPass() {
 	    ->Execute(m_resourceManager.GetMeshes(), m_resourceManager.GetGraphicsPrograms());
 
 	m_currentRenderPass->End();
+
+	 if (m_activeFrameBuffer) {
+		VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(m_activeFrameBuffer);
+		VkImage colorImage = fb.GetColorImage();
+		VkFormat colorFormat = fb.GetColorFormat();
+		// Переходим из COLOR_ATTACHMENT_OPTIMAL в SHADER_READ_ONLY_OPTIMAL
+		m_device.TransitionImageLayout(
+		    colorImage,
+		    colorFormat,
+		    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		    1
+		);
+	}
 
 	m_currentRenderPass = nullptr;
 }

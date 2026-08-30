@@ -2,7 +2,7 @@
 #include "PixieUIApplication/UIWindow.h"
 
 #include <PixieRendering/Renderer/IRenderer.h>
-#include <PixieRendering/ResourceHandles.h>
+#include <PixieRendering/Resources/ResourceHandles.h>
 
 #include <vulkan/vulkan.h>
 

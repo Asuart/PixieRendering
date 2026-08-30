@@ -4,9 +4,9 @@
 
 namespace PixieRenderer {
 
-struct FrameBufferOpenGL {
-	FrameBufferOpenGL(glm::ivec2 resolution);
-	~FrameBufferOpenGL();
+struct OpenGLFrameBuffer {
+	OpenGLFrameBuffer(glm::ivec2 resolution);
+	~OpenGLFrameBuffer();
 
 	void Resize(glm::ivec2 resolution);
 	glm::ivec2 GetResolution() const;

@@ -27,6 +27,13 @@ class VulkanFrameBuffer {
 	VkExtent2D GetExtent() const;
 	VulkanRenderPass* GetRenderPassObject();
 
+	VkImage GetColorImage() const {
+		return m_colorImage;
+	}
+	VkFormat GetColorFormat() const {
+		return m_colorFormat;
+	}
+
 	VkViewport GetViewport() const;
 	void SetViewport(VkViewport viewport);
 	void ResetViewport();

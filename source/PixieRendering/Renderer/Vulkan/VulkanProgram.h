@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "../../ResourceHandles.h"
+#include "PixieRendering/Resources/ResourceHandles.h"
 #include "ShaderCompilationVulkan.h"
 #include "VulkanBuffer.h"
 #include "VulkanTexture.h"

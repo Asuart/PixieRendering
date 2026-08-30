@@ -8,8 +8,8 @@
 
 #include "VulkanDevice.h"
 #include "VulkanInstance.h"
-#include "VulkanResourceManager.h"
 #include "VulkanSwapchain.h"
+#include "PixieRendering/ResourceManager/ResourceManagerVulkan.h"
 
 namespace PixieRenderer {
 
@@ -111,7 +111,7 @@ class RendererVulkan : public IRenderer {
   private:
 	VulkanInstance m_instance;
 	VulkanDevice m_device;
-	VulkanResourceManager m_resourceManager;
+	ResourceManagerVulkan m_resourceManager;
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	std::unique_ptr<VulkanRenderPass> m_presentRenderPass = nullptr;
 	std::unique_ptr<VulkanSwapchain> m_swapchain = nullptr;
