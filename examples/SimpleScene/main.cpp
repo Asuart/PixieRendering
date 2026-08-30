@@ -54,59 +54,48 @@ void main()
 
 class SimplaeSceneApp : public PixieApp::PixieUIApplication {
   public:
-	SimplaeSceneApp() : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
+	SimplaeSceneApp(const char* path) : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
 		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
 		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(m_renderer, m_frameBuffer));
+
+		std::filesystem::path appPath = std::filesystem::path(path);
+		const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
+
+		Mesh* mesh = LoadMesh(filePath);
+
+		glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
+		glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
+		m_camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		m_meshHandle = m_renderer->CreateMesh(mesh);
+
+		Material materialInfo{ vertexShaderSource, fragmentShaderSource };
+		m_materialHandle = m_renderer->CreateMaterial(&materialInfo);
+
+		delete mesh;
 	}
+
+	void OnBeforeDrawUI() override {
+		m_renderer->BindFrameBuffer(m_frameBuffer);
+		float aspect = static_cast<float>(m_window->GetResolution().x) / m_window->GetResolution().y;
+		m_camera.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+		m_renderer->LoadUniformBuffer(m_materialHandle, "CameraUBO", &m_camera, sizeof(Camera));
+		m_renderer->DrawMesh(m_meshHandle, m_materialHandle);
+		m_renderer->UnbindFrameBuffer();
+	};
 
   private:
 	FrameBufferHandle m_frameBuffer;
+	MaterialHandle m_materialHandle;
+	MeshHandle m_meshHandle;
+	Camera m_camera;
 };
 
 int32_t main(int argc, char** argv) {
-	SimplaeSceneApp* app = new SimplaeSceneApp();
+	SimplaeSceneApp* app = new SimplaeSceneApp(argv[0]);
 	app->Start();
-
-	// std::filesystem::path appPath = std::filesystem::path(argv[0]);
-	// const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
-
-	// Window* window = CreateWindow("Simple Scene", { 1280, 720 }, RenderAPI::Vulkan);
-	// IRenderer* renderer = CreateRenderer(window);
-
-	// Mesh* mesh = LoadMesh(filePath);
-
-	// glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
-	// glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
-	// Camera camera;
-	// camera.view = glm::lookAt(cameraPosition, center, glm::vec3(0.0f, 1.0f, 0.0f));
-
-	// MeshHandle meshHandle = renderer->CreateMesh(mesh);
-
-	// Material materialInfo{ vertexShaderSource, fragmentShaderSource };
-	// MaterialHandle materialHandle = renderer->CreateMaterial(&materialInfo);
-
-	// while (!window->GetShouldClose()) {
-	//	renderer->StartFrame();
-
-	//	float aspect = static_cast<float>(window->GetResolution().x) / window->GetResolution().y;
-	//	camera.projection = glm::perspective(
-	//	    glm::radians(45.0f),
-	//	    aspect,
-	//	    0.1f,
-	//	    100.0f
-	//	);
-	//	renderer->LoadUniformBuffer(materialHandle, "CameraUBO", &camera, sizeof(Camera));
-	//	renderer->DrawMesh(meshHandle, materialHandle);
-
-	//	renderer->EndFrame();
-
-	//	window->SwapBuffers();
-	//	window->PollEvents();
-	//}
-
-	// delete mesh;
 
 	delete app;
 

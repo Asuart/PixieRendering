@@ -624,6 +624,24 @@ void RendererVulkan::EndRenderPass() {
 		);
 	}
 
+	 VkMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	vkCmdPipelineBarrier(
+	    m_commandBuffers[m_currentFrame],
+	    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	    0,
+	    1,
+	    &barrier,
+	    0,
+	    nullptr,
+	    0,
+	    nullptr
+	);
+
 	m_currentRenderPass = nullptr;
 }
 
