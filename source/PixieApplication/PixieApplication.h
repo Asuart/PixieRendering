@@ -13,6 +13,8 @@ class PixieApplication {
 	    glm::ivec2 resolution,
 	    PixieRenderer::RenderAPI renderAPI
 	);
+	virtual ~PixieApplication() {
+	}
 
 	virtual void Start();
 

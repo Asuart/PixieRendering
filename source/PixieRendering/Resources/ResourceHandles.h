@@ -16,8 +16,8 @@ enum class ResourceType : uint32_t {
 class IResourceManager;
 
 template <ResourceType t> class ResourceHandle {
-	uint64_t m_id = UINT64_MAX;
 	IResourceManager* m_manager = nullptr;
+	uint64_t m_id = UINT64_MAX;
 
   public:
 	static constexpr ResourceType type = t;

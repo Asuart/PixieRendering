@@ -1,8 +1,5 @@
 #include "RendererVulkan.h"
 
-#include <algorithm>
-#include <set>
-
 #include "../../Window/WindowVulkan.h"
 #include "DebugVulkan.h"
 #include "VulkanConfig.h"
@@ -44,7 +41,7 @@ void RendererVulkan::InitVulkan() {
 	m_device.CreateCommandPool(m_commandPool);
 
 	m_commandBuffers.resize(cMaxFramesInFlight);
-	for (int32_t i = 0; i < m_commandBuffers.size(); i++) {
+	for (size_t i = 0; i < m_commandBuffers.size(); i++) {
 		m_device.CreateCommandBuffer(m_commandPool, m_commandBuffers[i]);
 	}
 
@@ -192,7 +189,7 @@ void RendererVulkan::BeginRenderPass(FrameBufferHandle handle) {
 		    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 		    VK_IMAGE_ASPECT_COLOR_BIT,
-		    m_currentFrame
+		    m_nextImageIndex
 		);
 
 		framebuffer = m_swapchain->GetFrameBuffer(m_nextImageIndex);

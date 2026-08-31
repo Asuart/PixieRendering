@@ -1,9 +1,8 @@
 #pragma once
-#include <cstdint>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 
-#include "VulkanConfig.h"
 #include "VulkanSampler.h"
 
 namespace PixieRenderer {
@@ -57,6 +56,7 @@ class VulkanFrameBuffer {
 
   private:
 	VulkanDevice& m_device;
+	VkExtent2D m_extent = { 0, 0 };
 	VkImage m_colorImage = VK_NULL_HANDLE;
 	VkDeviceMemory m_colorImageMemory = VK_NULL_HANDLE;
 	VkImageView m_colorImageView = VK_NULL_HANDLE;
@@ -65,13 +65,12 @@ class VulkanFrameBuffer {
 	VkImageView m_depthImageView = VK_NULL_HANDLE;
 	std::unique_ptr<VulkanSampler> m_sampler = nullptr;
 	VkFramebuffer m_framebuffer = VK_NULL_HANDLE;
-	VulkanRenderPass* m_renderPass = nullptr;
 	VkFormat m_colorFormat = VK_FORMAT_UNDEFINED;
 	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
 	VkImageLayout m_imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	VkExtent2D m_extent = { 0, 0 };
 	VkViewport m_viewport = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 	VkRect2D m_scissor = { { 0, 0 }, { 0, 0 } };
+	VulkanRenderPass* m_renderPass = nullptr;
 
 	void CreateImages();
 	void FreeImages();

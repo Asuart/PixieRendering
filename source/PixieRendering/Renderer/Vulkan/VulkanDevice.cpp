@@ -1,6 +1,5 @@
 #include "VulkanDevice.h"
 
-#include <array>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -482,7 +481,7 @@ VulkanDevice::FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR su
 	    queueFamilies.data()
 	);
 
-	for (int32_t i = 0; i < queueFamilies.size(); i++) {
+	for (size_t i = 0; i < queueFamilies.size(); i++) {
 		const auto& queueFamily = queueFamilies[i];
 
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
