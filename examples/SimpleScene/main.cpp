@@ -12,8 +12,12 @@
 #include <PixieUIApplication/PixieUIApplication.h>
 #include <PixieUIApplication/Windows/DemoWindow.h>
 #include <PixieUIApplication/Windows/TextureDisplayWindow.h>
+#include <PixieApplication/Time/ApplicationTime.h>
 
 #include "LoadScene.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 using namespace PixieRenderer;
 
@@ -33,9 +37,13 @@ layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 projection;
 } camera;
 
+layout(set = 0, binding = 1) uniform ModelUBO {
+    mat4 model;
+} modelData;
+
 void main()
 {
-    gl_Position = camera.projection * camera.view * vec4(aPos, 1.0);
+    gl_Position = camera.projection * camera.view * modelData.model * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
 }
 )";
@@ -46,15 +54,18 @@ const char* fragmentShaderSource = R"(
 layout(location = 0) in vec2 TexCoord;
 layout(location = 0) out vec4 FragColor;
 
+layout(set = 0, binding = 2) uniform sampler2D texSampler;
+
 void main()
 {
-    FragColor = vec4(TexCoord.x, TexCoord.y, 0.0, 1.0);
+    FragColor = texture(texSampler, TexCoord);
 }
 )";
 
 class SimplaeSceneApp : public PixieApp::PixieUIApplication {
   public:
-	SimplaeSceneApp(const char* path) : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
+	SimplaeSceneApp(const char* path)
+	    : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
 		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
@@ -64,6 +75,30 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 		const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
 
 		Mesh* mesh = LoadMesh(filePath);
+
+		int width, height, channels;
+		stbi_uc* data = stbi_load(
+		    (appPath.parent_path().string() + "/cube/texture.png").c_str(),
+		    &width,
+		    &height,
+		    &channels,
+		    4
+		);
+
+		if (!data) {
+			std::cout << "failed to load texture\n";
+			exit(2);
+		}
+
+		Image2D image;
+		image.resolution = glm::ivec2(width, height);
+		image.format = TextureFormat::RGBA8;
+		image.pixels.resize(width * height * 4);
+		memcpy(image.pixels.data(), data, image.pixels.size());
+
+		stbi_image_free(data);
+
+		m_texture = m_renderer->CreateTexture(&image);
 
 		glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, -5.0f);
 		glm::vec3 center = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -81,11 +116,23 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 		m_ui->OnBeforeDrawFrame();
 
 		m_renderer->BeginRenderPass(m_frameBuffer);
+
 		float aspect = static_cast<float>(m_window->GetResolution().x) /
 		               m_window->GetResolution().y;
 		m_camera.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
 		m_renderer->LoadUniformBuffer(m_materialHandle, "CameraUBO", &m_camera, sizeof(Camera));
+
+		glm::mat4 model = glm::mat4(1.0f);
+		//m_angle += PixieApp::Time::deltaTime * 0.5f;
+		//model = glm::rotate(model, m_angle, glm::vec3(0.0f, 1.0f, 0.0f));       
+		//model = glm::rotate(model, m_angle * 0.7f, glm::vec3(1.0f, 0.0f, 0.0f));
+		//model = glm::rotate(model, m_angle * 0.3f, glm::vec3(0.0f, 0.0f, 1.0f));
+		m_renderer->LoadUniformBuffer(m_materialHandle, "ModelUBO", &model, sizeof(glm::mat4));
+
+		m_renderer->BindTexture(m_materialHandle, "texSampler", m_texture, 0);
+
 		m_renderer->DrawMesh(m_meshHandle, m_materialHandle);
+
 		m_renderer->EndRenderPass();
 	}
 
@@ -93,7 +140,9 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 	FrameBufferHandle m_frameBuffer;
 	MaterialHandle m_materialHandle;
 	MeshHandle m_meshHandle;
+	TextureHandle m_texture;
 	Camera m_camera;
+	float m_angle = 0.0f;
 };
 
 int32_t main(int argc, char** argv) {

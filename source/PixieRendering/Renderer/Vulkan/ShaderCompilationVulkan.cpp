@@ -8,8 +8,10 @@
 
 namespace PixieRenderer {
 
-SpirVBinary
-ShaderCompilerVulkan::CompileShaderToSPIRV(glslang_stage_t stage, const char* shaderSource) {
+SpirVBinary ShaderCompilerVulkan::CompileShaderToSPIRV(
+    glslang_stage_t stage,
+    const char* shaderSource
+) {
 	glslang_input_t glslangShaderCreateInfo = {
 		.language = GLSLANG_SOURCE_GLSL,
 		.stage = stage,
@@ -102,15 +104,15 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
 	if (!ShaderCompiler::IsInitialized()) {
 		ShaderCompiler::Initialize();
 	}
-	
+
 	SpirVBinary vertexBinary = CompileShaderToSPIRV(GLSLANG_STAGE_VERTEX, vertexShaderSource);
 	SpirVBinary fragmentBinary = CompileShaderToSPIRV(GLSLANG_STAGE_FRAGMENT, fragmentShaderSource);
 
 	BindingsInfo vertexInfo = ReflectSPIRV(vertexBinary);
 	BindingsInfo fragmentInfo = ReflectSPIRV(fragmentBinary);
 
-	std::vector<ShaderBinding> mergedBindings =
-	    ShaderCompiler::MergeBindings(vertexInfo.bindings, fragmentInfo.bindings);
+	std::vector<ShaderBinding>
+	    mergedBindings = ShaderCompiler::MergeBindings(vertexInfo.bindings, fragmentInfo.bindings);
 
 	BindingsInfo finalInfo;
 	finalInfo.bindings = std::move(mergedBindings);
@@ -144,8 +146,10 @@ CompiledShader ShaderCompilerVulkan::CompileShader(
 		     finalInfo };
 }
 
-CompiledComputeShader
-ShaderCompilerVulkan::CompileComputeShader(VkDevice device, const char* source) {
+CompiledComputeShader ShaderCompilerVulkan::CompileComputeShader(
+    VkDevice device,
+    const char* source
+) {
 	if (!ShaderCompiler::IsInitialized()) {
 		ShaderCompiler::Initialize();
 	}
@@ -184,7 +188,13 @@ BindingsInfo ShaderCompilerVulkan::ReflectSPIRV(const SpirVBinary& binary) {
 			uint32_t setIndex = (set != 0) ? set : 0;
 
 			auto type_id = compiler->get_type(res.type_id);
-			uint32_t blockSize = static_cast<uint32_t>(compiler->get_declared_struct_size(type_id));
+
+			uint32_t blockSize = 0;
+			if (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+			    type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) {
+				auto base_type_id = compiler->get_type(res.base_type_id);
+				blockSize = static_cast<uint32_t>(compiler->get_declared_struct_size(base_type_id));
+			}
 
 			uint32_t count = 1;
 			if (type_id.array.size() > 0) {

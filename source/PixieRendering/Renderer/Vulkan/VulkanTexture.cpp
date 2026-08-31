@@ -73,6 +73,10 @@ void VulkanTexture::Load(const Image2D* image, uint32_t mipmapLevels) {
 	GenerateMipmaps();
 
 	TransitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	if (!m_sampler) {
+		m_sampler = std::make_shared<VulkanSampler>(m_device);
+	}
 }
 
 void VulkanTexture::Free() {
