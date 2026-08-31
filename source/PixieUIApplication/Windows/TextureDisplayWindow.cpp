@@ -102,9 +102,6 @@ void TextureDisplayWindow::OnBeforeDraw() {
 		return;
 	}
 
-	m_renderer->ResizeFrameBuffer(m_frameBuffer, m_viewportResolution);
-	m_renderer->BindFrameBuffer(m_frameBuffer);
-
 	struct PlaceUBO {
 		glm::vec2 position = { 0.0f, 0.0f };
 		glm::vec2 size = { 1.0f, 1.0f };
@@ -116,7 +113,7 @@ void TextureDisplayWindow::OnBeforeDraw() {
 	} else if (m_frameBuffer) {
 		textureAspect = Aspect(m_renderer->GetFrameBufferResolution(m_frameBuffer));
 	}
-	
+
 	float viewportAspect = Aspect(m_viewportResolution);
 	if (viewportAspect > textureAspect) {
 		planeUBO.size.x = textureAspect / viewportAspect;
@@ -126,15 +123,19 @@ void TextureDisplayWindow::OnBeforeDraw() {
 		planeUBO.position.y = (1.0f - planeUBO.size.y) * 0.5f;
 	}
 
+	m_renderer->ResizeFrameBuffer(m_frameBuffer, m_viewportResolution);
+	m_renderer->BeginRenderPass(m_frameBuffer);
+
 	m_renderer->LoadUniformBuffer(m_shader, "PlaneUBO", &planeUBO, sizeof(PlaceUBO));
 	//// m_renderer->BindTexture(m_shader, "displayTexture", m_targetTexture, 0);
 	 m_renderer->DrawMesh(m_screenPlane, m_shader);
 
-	m_renderer->UnbindFrameBuffer();
+	m_renderer->EndRenderPass();
 }
 
 void TextureDisplayWindow::Draw() {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.2f, 0.3f, 0.4f, 1.0f));
 	if (ImGui::Begin((std::string("Texture View##")).c_str())) {
 		if (ImGui::IsWindowFocused()) {
 		}
@@ -146,11 +147,15 @@ void TextureDisplayWindow::Draw() {
 		ImGui::Image(m_displayTexture, viewportResolution, { 0.0, 1.0 }, { 1.0, 0.0 });
 	}
 	ImGui::End();
+	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
 }
 
 void TextureDisplayWindow::SetTexture(TextureHandle texture) {
 	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
+	if (m_displayTexture) {
+		ImGui_ImplVulkan_RemoveTexture(m_displayTexture);
+	}
 	m_displayTexture = ImGui_ImplVulkan_AddTexture(
 	    renderer->GetTextureSampler(texture),
 	    renderer->GetTextureImageView(texture),
@@ -160,6 +165,9 @@ void TextureDisplayWindow::SetTexture(TextureHandle texture) {
 
 void TextureDisplayWindow::SetFrameBuffer(FrameBufferHandle frameBuffer) {
 	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
+	if (m_displayTexture) {
+		ImGui_ImplVulkan_RemoveTexture(m_displayTexture);
+	}
 	m_displayTexture = ImGui_ImplVulkan_AddTexture(
 	    renderer->GetFrameBufferSampler(frameBuffer),
 	    renderer->GetFrameBufferColorImageView(frameBuffer),

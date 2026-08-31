@@ -83,6 +83,7 @@ void VulkanProgram::BindTexture(
     const std::string& name,
     TextureHandle /*handle*/,
     VulkanTexture& texture,
+    uint32_t frameIndex,
     uint32_t index
 ) {
 	VkDevice device = m_device.GetDevice();
@@ -95,16 +96,14 @@ void VulkanProgram::BindTexture(
 
 	VkWriteDescriptorSet write{};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = m_descriptorSets[frameIndex];
 	write.dstBinding = binding;
 	write.dstArrayElement = index;
 	write.descriptorCount = 1;
 	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write.pImageInfo = &imageInfo;
 
-	for (uint32_t frame = 0; frame < cMaxFramesInFlight; ++frame) {
-		write.dstSet = m_descriptorSets[frame];
-		vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-	}
+	vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 }
 
 void VulkanProgram::UpdateUniformBuffer(

@@ -126,6 +126,8 @@ VulkanSwapchain::VulkanSwapchain(
 			throw std::runtime_error("failed to create framebuffer!");
 		}
 	}
+
+	m_imageLayouts.resize(m_images.size(), VK_IMAGE_LAYOUT_UNDEFINED);
 }
 
 VulkanSwapchain::~VulkanSwapchain() {
@@ -183,6 +185,29 @@ VkFramebuffer VulkanSwapchain::GetFrameBuffer(uint32_t index) const {
 
 uint64_t VulkanSwapchain::GetImageCount() const {
 	return m_images.size();
+}
+
+void VulkanSwapchain::Transition(
+    VkImageLayout newLayout,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkPipelineStageFlags srcStage,
+    VkPipelineStageFlags dstStage,
+    VkImageAspectFlags aspectMask,
+    uint32_t frameIndex
+) {
+	m_device.TransitionImage(
+	    m_images[frameIndex],
+	    m_imageLayouts[frameIndex],
+	    newLayout,
+	    srcAccessMask,
+	    dstAccessMask,
+	    srcStage,
+	    dstStage,
+	    aspectMask,
+	    1
+	);
+	m_imageLayouts[frameIndex] = newLayout;
 }
 
 VkSurfaceFormatKHR VulkanSwapchain::ChooseSurfaceFormat(

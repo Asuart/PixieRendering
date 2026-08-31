@@ -77,14 +77,17 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 		delete mesh;
 	}
 
-	void OnBeforeDrawUI() override {
-		m_renderer->BindFrameBuffer(m_frameBuffer);
-		float aspect = static_cast<float>(m_window->GetResolution().x) / m_window->GetResolution().y;
+	void BeforeDrawFrame() override {
+		m_ui->OnBeforeDrawFrame();
+
+		m_renderer->BeginRenderPass(m_frameBuffer);
+		float aspect = static_cast<float>(m_window->GetResolution().x) /
+		               m_window->GetResolution().y;
 		m_camera.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
 		m_renderer->LoadUniformBuffer(m_materialHandle, "CameraUBO", &m_camera, sizeof(Camera));
 		m_renderer->DrawMesh(m_meshHandle, m_materialHandle);
-		m_renderer->UnbindFrameBuffer();
-	};
+		m_renderer->EndRenderPass();
+	}
 
   private:
 	FrameBufferHandle m_frameBuffer;

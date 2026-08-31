@@ -8,6 +8,8 @@
 #include "VulkanBuffer.h"
 #include "VulkanSwapchain.h"
 
+#include "DebugVulkan.h"
+
 namespace PixieRenderer {
 
 const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -299,6 +301,14 @@ void VulkanDevice::TransitionImageLayout(
     VkImageLayout newLayout,
     uint32_t mipLevels
 ) {
+	if (oldLayout == newLayout) {
+		return;
+	}
+
+	if (debug_isInRenderPass) {
+		throw "should not trasition during render pass";
+	}
+
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands(m_commandPool);
 
 	VkImageMemoryBarrier barrier{};
@@ -333,6 +343,47 @@ void VulkanDevice::TransitionImageLayout(
 	);
 
 	EndSingleTimeCommands(m_commandPool, commandBuffer);
+}
+
+void VulkanDevice::TransitionImage(
+    VkImage image,
+    VkImageLayout oldLayout,
+    VkImageLayout newLayout,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkPipelineStageFlags srcStage,
+    VkPipelineStageFlags dstStage,
+    VkImageAspectFlags aspectMask,
+    uint32_t mipLevels
+) {
+	if (oldLayout == newLayout) {
+		return;
+	}
+
+	if (debug_isInRenderPass) {
+		throw "should not trasition during render pass";
+	}
+
+	VkCommandBuffer buf = BeginSingleTimeCommands();
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = aspectMask;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = mipLevels;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.srcAccessMask = srcAccessMask;
+	barrier.dstAccessMask = dstAccessMask;
+
+	vkCmdPipelineBarrier(buf, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+	EndSingleTimeCommands(buf);
 }
 
 QueueFamilyIndices VulkanDevice::GetQueueFamilyIndices() const {

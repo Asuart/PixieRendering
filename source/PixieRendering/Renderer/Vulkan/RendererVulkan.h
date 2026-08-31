@@ -19,6 +19,8 @@ class RendererVulkan : public IRenderer {
 
 	bool BeginFrame() override;
 	void EndFrame() override;
+	void BeginRenderPass(FrameBufferHandle handle = FrameBufferHandle()) override;
+	void EndRenderPass() override;
 
 	void SetRenderResolution(glm::uvec2 resolution) override;
 	void SetViewport(glm::ivec2 start, glm::uvec2 resolution) override;
@@ -31,8 +33,6 @@ class RendererVulkan : public IRenderer {
 	FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format, bool isPresent)
 	    override;
 	void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) override;
-	void BindFrameBuffer(FrameBufferHandle handle) override;
-	void UnbindFrameBuffer() override;
 	glm::uvec2 GetFrameBufferResolution(FrameBufferHandle handle) override;
 
 	TextureHandle CreateTexture(const Image2D* image) override;
@@ -154,9 +154,6 @@ class RendererVulkan : public IRenderer {
 	void CreateSyncObjects();
 
 	VulkanRenderPass* GetOrCreateRenderPass(VkFormat colorFormat, VkImageLayout finalLayout);
-
-	void BeginRenderPass();
-	void EndRenderPass();
 };
 
 } // namespace PixieRenderer

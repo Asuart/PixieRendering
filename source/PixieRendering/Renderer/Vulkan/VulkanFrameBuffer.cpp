@@ -150,6 +150,33 @@ void VulkanFrameBuffer::Resize(VkExtent2D extent) {
 	}
 }
 
+void VulkanFrameBuffer::Transition(
+    VkImageLayout newLayout,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkPipelineStageFlags srcStage,
+    VkPipelineStageFlags dstStage,
+    VkImageAspectFlags aspectMask
+) {
+	m_device.TransitionImage(
+	    m_colorImage,
+	    m_imageLayout,
+	    newLayout,
+	    srcAccessMask,
+	    dstAccessMask,
+	    srcStage,
+	    dstStage,
+	    aspectMask,
+	    1
+	);
+	m_imageLayout = newLayout;
+}
+
+void VulkanFrameBuffer::TransitionLayout(VkImageLayout newLayout) {
+	m_device.TransitionImageLayout(m_colorImage, m_colorFormat, m_imageLayout, newLayout, 1);
+	m_imageLayout = newLayout;
+}
+
 void VulkanFrameBuffer::CreateImages() {
 	m_device.CreateImage(
 	    m_extent.width,
@@ -162,13 +189,6 @@ void VulkanFrameBuffer::CreateImages() {
 	    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 	    m_colorImage,
 	    m_colorImageMemory
-	);
-	m_device.TransitionImageLayout(
-	    m_colorImage,
-	    m_colorFormat,
-	    VK_IMAGE_LAYOUT_UNDEFINED,
-	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-	    1
 	);
 	m_device.CreateImageView(
 	    m_colorImage,
@@ -197,6 +217,8 @@ void VulkanFrameBuffer::CreateImages() {
 	    1,
 	    m_depthImageView
 	);
+
+	TransitionLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 }
 
 void VulkanFrameBuffer::FreeImages() {
@@ -226,6 +248,8 @@ void VulkanFrameBuffer::FreeImages() {
 		vkFreeMemory(device, m_depthImageMemory, nullptr);
 		m_depthImageMemory = VK_NULL_HANDLE;
 	}
+
+	m_imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 } // namespace PixieRenderer

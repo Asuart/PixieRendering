@@ -34,8 +34,9 @@ void VulkanTexture::Load(const Image2D* image, uint32_t mipmapLevels) {
 	m_height = image->resolution.y;
 	m_format = ToVkFormat(image->format);
 
-	uint32_t maxMipLevels =
-	    static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))) + 1;
+	uint32_t maxMipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(m_width, m_height)))
+	                        ) +
+	                        1;
 	m_mipLevels = std::clamp(mipmapLevels, 1u, maxMipLevels);
 
 	VkDeviceSize imageSize = m_width * m_height * FormatToByteSize(image->format);
@@ -62,13 +63,7 @@ void VulkanTexture::Load(const Image2D* image, uint32_t mipmapLevels) {
 	    m_memory
 	);
 
-	m_device.TransitionImageLayout(
-	    m_image,
-	    m_format,
-	    VK_IMAGE_LAYOUT_UNDEFINED,
-	    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	    m_mipLevels
-	);
+	TransitionLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 	m_device.CopyBufferToImage(stagingBuffer.GetBuffer(), m_image, m_width, m_height);
 
@@ -77,15 +72,7 @@ void VulkanTexture::Load(const Image2D* image, uint32_t mipmapLevels) {
 
 	GenerateMipmaps();
 
-	if (m_mipLevels == 1) {
-		m_device.TransitionImageLayout(
-		    m_image,
-		    m_format,
-		    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		    1
-		);
-	}
+	TransitionLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void VulkanTexture::Free() {
@@ -165,6 +152,33 @@ void VulkanTexture::SetAnisatropy(bool state) {
 		return;
 	}
 	m_sampler->SetAnisotropy(state);
+}
+
+void VulkanTexture::Transition(
+    VkImageLayout newLayout,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkPipelineStageFlags srcStage,
+    VkPipelineStageFlags dstStage,
+    VkImageAspectFlags aspectMask
+) {
+	m_device.TransitionImage(
+	    m_image,
+	    m_imageLayout,
+	    newLayout,
+	    srcAccessMask,
+	    dstAccessMask,
+	    srcStage,
+	    dstStage,
+	    aspectMask,
+	    m_mipLevels
+	);
+	m_imageLayout = newLayout;
+}
+
+void VulkanTexture::TransitionLayout(VkImageLayout newLayout) {
+	m_device.TransitionImageLayout(m_image, m_format, m_imageLayout, newLayout, m_mipLevels);
+	m_imageLayout = newLayout;
 }
 
 void VulkanTexture::GenerateMipmaps() {

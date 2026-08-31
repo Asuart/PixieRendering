@@ -44,6 +44,18 @@ void RendererOpenGL::EndFrame() {
 	assert(m_viewportStates.size() == 0);
 }
 
+void RendererOpenGL::BeginRenderPass(FrameBufferHandle handle) {
+	OpenGLFrameBuffer& frameBufferEntry = m_resourceManager.GetFrameBufferEntry(handle);
+	StoreViewportState();
+	frameBufferEntry.Bind();
+	frameBufferEntry.ResizeViewport();
+}
+
+void RendererOpenGL::EndRenderPass() {
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	RestoreViewportState();
+}
+
 MeshHandle RendererOpenGL::CreateMesh(const Mesh* mesh) {
 	MeshHandle handle = m_resourceManager.CreateMesh();
 
@@ -95,18 +107,6 @@ FrameBufferHandle RendererOpenGL::CreateFrameBuffer(
 void RendererOpenGL::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) {
 	OpenGLFrameBuffer& frameBufferEntry = m_resourceManager.GetFrameBufferEntry(handle);
 	frameBufferEntry.Resize(resolution);
-}
-
-void RendererOpenGL::BindFrameBuffer(FrameBufferHandle handle) {
-	OpenGLFrameBuffer& frameBufferEntry = m_resourceManager.GetFrameBufferEntry(handle);
-	StoreViewportState();
-	frameBufferEntry.Bind();
-	frameBufferEntry.ResizeViewport();
-}
-
-void RendererOpenGL::UnbindFrameBuffer() {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	RestoreViewportState();
 }
 
 glm::uvec2 RendererOpenGL::GetFrameBufferResolution(FrameBufferHandle handle) {

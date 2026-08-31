@@ -37,7 +37,8 @@ class VulkanProgram {
 	    const std::string& name,
 	    TextureHandle handle,
 	    VulkanTexture& texture,
-	    uint32_t index = 0
+	    uint32_t frameIndex,
+	    uint32_t index
 	);
 
 	void UpdateUniformBuffer(

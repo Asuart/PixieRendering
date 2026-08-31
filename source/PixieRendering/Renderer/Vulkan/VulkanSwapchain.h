@@ -19,6 +19,26 @@ class VulkanSwapchain {
 	VkFramebuffer GetFrameBuffer(uint32_t index) const;
 	uint64_t GetImageCount() const;
 
+	VkImage GetImage(uint32_t index) const {
+		return m_images[index];
+	}
+	VkImageLayout GetImageLayout(uint32_t index) const {
+		return m_imageLayouts[index];
+	}
+	void SetImageLayout(uint32_t index, VkImageLayout layout) {
+		m_imageLayouts[index] = layout;
+	}
+
+	void Transition(
+	    VkImageLayout newLayout,
+	    VkAccessFlags srcAccessMask,
+	    VkAccessFlags dstAccessMask,
+	    VkPipelineStageFlags srcStage,
+	    VkPipelineStageFlags dstStage,
+	    VkImageAspectFlags aspectMask,
+	    uint32_t frameIndex
+	);
+
   private:
 	VulkanDevice& m_device;
 	VkExtent2D m_extent = { 0, 0 };
@@ -28,6 +48,7 @@ class VulkanSwapchain {
 	std::vector<VkImage> m_images = {};
 	std::vector<VkImageView> m_imageViews = {};
 	std::vector<VkFramebuffer> m_framebuffers = {};
+	std::vector<VkImageLayout> m_imageLayouts;
 
 	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
 	VkImage m_depthImage = VK_NULL_HANDLE;
@@ -35,10 +56,12 @@ class VulkanSwapchain {
 	VkImageView m_depthImageView = VK_NULL_HANDLE;
 
   public:
-	static VkSurfaceFormatKHR
-	ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-	static VkPresentModeKHR
-	ChoosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	static VkSurfaceFormatKHR ChooseSurfaceFormat(
+	    const std::vector<VkSurfaceFormatKHR>& availableFormats
+	);
+	static VkPresentModeKHR ChoosePresentMode(
+	    const std::vector<VkPresentModeKHR>& availablePresentModes
+	);
 	static VkExtent2D ChooseExtent(VkExtent2D extent, const VkSurfaceCapabilitiesKHR& capabilities);
 };
 

@@ -28,7 +28,7 @@ class VulkanRenderPass {
 
 	void AddRenderRequest(RenderRequest request);
 
-	void Begin(VkCommandBuffer cmdBuf, uint32_t frameIndex, const VulkanFrameBuffer& frameBuffer);
+	void Begin(VkCommandBuffer cmdBuf, uint32_t frameIndex, VulkanFrameBuffer& frameBuffer);
 	void Begin(
 	    VkCommandBuffer cmdBuf,
 	    uint32_t frameIndex,

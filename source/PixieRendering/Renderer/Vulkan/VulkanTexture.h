@@ -5,6 +5,7 @@
 
 #include "../../Resources/Image2D.h"
 #include "PixieRendering/TextureEnums.h"
+#include "VulkanConfig.h"
 #include "VulkanSampler.h"
 
 namespace PixieRenderer {
@@ -13,7 +14,11 @@ class VulkanDevice;
 
 class VulkanTexture {
   public:
-	VulkanTexture(VulkanDevice& parentDevice, const Image2D* image = nullptr, uint32_t mipmapLevels = 1);
+	VulkanTexture(
+	    VulkanDevice& parentDevice,
+	    const Image2D* image = nullptr,
+	    uint32_t mipmapLevels = 1
+	);
 	~VulkanTexture();
 
 	void Load(const Image2D* image, uint32_t mipmapLevels = 1);
@@ -26,11 +31,28 @@ class VulkanTexture {
 	VkImageView GetImageView() const;
 	VkSampler GetSampler() const;
 
+	VkImage GetImage() const {
+		return m_image;
+	}
+
 	void SetSampler(const std::shared_ptr<VulkanSampler>& sampler);
-	void
-	SetWrap(VkSamplerAddressMode wrapU, VkSamplerAddressMode wrapV, VkSamplerAddressMode wrapW);
+	void SetWrap(
+	    VkSamplerAddressMode wrapU,
+	    VkSamplerAddressMode wrapV,
+	    VkSamplerAddressMode wrapW
+	);
 	void SetFiltering(VkFilter minFilter, VkFilter magFilter, VkSamplerMipmapMode mipmapMode);
 	void SetAnisatropy(bool state);
+
+	void Transition(
+	    VkImageLayout newLayout,
+	    VkAccessFlags srcAccessMask,
+	    VkAccessFlags dstAccessMask,
+	    VkPipelineStageFlags srcStage,
+	    VkPipelineStageFlags dstStage,
+	    VkImageAspectFlags aspectMask
+	);
+	void TransitionLayout(VkImageLayout newLayout);
 
   private:
 	VulkanDevice& m_device;
@@ -42,6 +64,7 @@ class VulkanTexture {
 	VkImageView m_imageView = VK_NULL_HANDLE;
 	VkFormat m_format = VK_FORMAT_UNDEFINED;
 	std::shared_ptr<VulkanSampler> m_sampler = nullptr;
+	VkImageLayout m_imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	void GenerateMipmaps();
 };

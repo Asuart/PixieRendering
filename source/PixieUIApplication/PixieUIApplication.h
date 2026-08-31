@@ -9,6 +9,7 @@ class PixieUIApplication : public PixieApplication {
 public:
 	PixieUIApplication(const std::string& name, glm::ivec2 resolution, PixieRenderer::RenderAPI renderAPI, bool docking);
 
+	virtual void BeforeDrawFrame() override;
 	void OnDrawFrame() final;
 	void HandleEvent(const PixieRenderer::WindowEvent& event) final;
 

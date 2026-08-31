@@ -25,8 +25,11 @@ PixieUIApplication::PixieUIApplication(const std::string& name, glm::ivec2 resol
 	}
 }
 
-void PixieUIApplication::OnDrawFrame() {
+void PixieUIApplication::BeforeDrawFrame() {
 	m_ui->OnBeforeDrawFrame();
+}
+
+void PixieUIApplication::OnDrawFrame() {
 	m_ui->Draw();
 }
 

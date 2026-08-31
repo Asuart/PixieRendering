@@ -3,6 +3,8 @@
 
 namespace PixieRenderer {
 
+extern bool debug_isInRenderPass;
+
 VkResult CreateDebugUtilsMessengerEXT(
     VkInstance instance,
     const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

@@ -91,6 +91,17 @@ class VulkanDevice {
 	    VkImageLayout newLayout,
 	    uint32_t mipLevels
 	);
+	void TransitionImage(
+	    VkImage image,
+	    VkImageLayout oldLayout,
+	    VkImageLayout newLayout,
+	    VkAccessFlags srcAccessMask,
+	    VkAccessFlags dstAccessMask,
+	    VkPipelineStageFlags srcStage,
+	    VkPipelineStageFlags dstStage,
+	    VkImageAspectFlags aspectMask,
+	    uint32_t mipLevels = 1
+	);
 
 	QueueFamilyIndices GetQueueFamilyIndices() const;
 	SwapChainSupportDetails QuerySwapChainSupport() const;

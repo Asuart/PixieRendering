@@ -95,8 +95,17 @@ void VulkanRenderPass::AddRenderRequest(RenderRequest request) {
 void VulkanRenderPass::Begin(
     VkCommandBuffer cmdBuf,
     uint32_t frameIndex,
-    const VulkanFrameBuffer& frameBuffer
+    VulkanFrameBuffer& frameBuffer
 ) {
+	frameBuffer.Transition(
+	    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	    VK_ACCESS_MEMORY_READ_BIT,
+	    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+	    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+	    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	    VK_IMAGE_ASPECT_COLOR_BIT
+	);
+
 	Begin(
 	    cmdBuf,
 	    frameIndex,
@@ -167,7 +176,7 @@ void VulkanRenderPass::Execute(
 		if (!req.materialHandle || !req.meshHandle) {
 			continue;
 		}
-		
+
 		VulkanMesh& mesh = *meshes[req.meshHandle.GetId() & 0xffffffff].resource;
 		VulkanGraphicsProgram&
 		    graphicsProgram = *graphicsPrograms[req.materialHandle.GetId() & 0xffffffff].resource;

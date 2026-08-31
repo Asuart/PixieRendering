@@ -33,6 +33,9 @@ class IRenderer {
 	virtual bool BeginFrame() = 0;
 	virtual void EndFrame() = 0;
 
+	virtual void BeginRenderPass(FrameBufferHandle handle = FrameBufferHandle()) = 0;
+	virtual void EndRenderPass() = 0;
+
 	virtual void SetRenderResolution(glm::uvec2 resolution) = 0;
 	virtual void SetViewport(glm::ivec2 start, glm::uvec2 resolution) = 0;
 	virtual void SetScissor(glm::ivec2 start, glm::uvec2 resolution) = 0;
@@ -43,8 +46,6 @@ class IRenderer {
 
 	virtual FrameBufferHandle CreateFrameBuffer(glm::uvec2 resolution, TextureFormat format, bool isPresentBuffer = false) = 0;
 	virtual void ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 resolution) = 0;
-	virtual void BindFrameBuffer(FrameBufferHandle handle) = 0;
-	virtual void UnbindFrameBuffer() = 0;
 	virtual glm::uvec2 GetFrameBufferResolution(FrameBufferHandle handle) = 0;
 
 	virtual TextureHandle CreateTexture(const Image2D* image) = 0;

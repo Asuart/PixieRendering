@@ -1,8 +1,8 @@
 #pragma once
-#include <PixieRendering/Window/Window.h>
-#include <PixieRendering/Renderer/IRenderer.h>
-#include <PixieRendering/RenderAPI.h>
 #include <PixieRendering/PixieRendering.h>
+#include <PixieRendering/RenderAPI.h>
+#include <PixieRendering/Renderer/IRenderer.h>
+#include <PixieRendering/Window/Window.h>
 
 namespace PixieApp {
 
@@ -25,7 +25,11 @@ class PixieApplication {
 	}
 	virtual void OnClose() {
 	}
+	virtual void BeforeDrawFrame() {
+	}
 	virtual void OnDrawFrame() {
+	}
+	virtual void AfterDrawFrame() {
 	}
 	virtual void HandleEvent(const PixieRenderer::WindowEvent&) {};
 };

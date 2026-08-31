@@ -3,6 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "VulkanConfig.h"
 #include "VulkanSampler.h"
 
 namespace PixieRenderer {
@@ -44,6 +45,16 @@ class VulkanFrameBuffer {
 
 	void Resize(VkExtent2D extent);
 
+	void Transition(
+	    VkImageLayout newLayout,
+	    VkAccessFlags srcAccessMask,
+	    VkAccessFlags dstAccessMask,
+	    VkPipelineStageFlags srcStage,
+	    VkPipelineStageFlags dstStage,
+	    VkImageAspectFlags aspectMask
+	);
+	void TransitionLayout(VkImageLayout newLayout);
+
   private:
 	VulkanDevice& m_device;
 	VkImage m_colorImage = VK_NULL_HANDLE;
@@ -57,6 +68,7 @@ class VulkanFrameBuffer {
 	VulkanRenderPass* m_renderPass = nullptr;
 	VkFormat m_colorFormat = VK_FORMAT_UNDEFINED;
 	VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
+	VkImageLayout m_imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkExtent2D m_extent = { 0, 0 };
 	VkViewport m_viewport = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 	VkRect2D m_scissor = { { 0, 0 }, { 0, 0 } };

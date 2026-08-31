@@ -31,7 +31,7 @@ class TextureDisplayWindow : public UIWindow {
 	PixieRenderer::MaterialHandle m_shader;
 	PixieRenderer::MeshHandle m_screenPlane;
 	glm::uvec2 m_viewportResolution;
-	VkDescriptorSet m_displayTexture;
+	VkDescriptorSet m_displayTexture = nullptr;
 
 	float Aspect(glm::ivec2 resolution);
 };

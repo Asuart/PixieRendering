@@ -104,14 +104,10 @@ bool RendererVulkan::BeginFrame() {
 
 	m_currentRenderPass = nullptr;
 
-	BeginRenderPass();
-
 	return true;
 }
 
 void RendererVulkan::EndFrame() {
-	EndRenderPass();
-
 	if (vkEndCommandBuffer(m_commandBuffers[m_currentFrame]) != VK_SUCCESS) {
 		throw std::runtime_error("Failed to record command buffer!");
 	}
@@ -156,6 +152,98 @@ void RendererVulkan::EndFrame() {
 	m_currentFrame = (m_currentFrame + 1) % cMaxFramesInFlight;
 
 	WaitIdle();
+}
+
+void RendererVulkan::BeginRenderPass(FrameBufferHandle handle) {
+	if (m_currentRenderPass) {
+		return;
+	}
+
+	m_activeFrameBuffer = handle;
+
+	VkFramebuffer framebuffer;
+	VkExtent2D extent;
+	VulkanRenderPass* rp = nullptr;
+	VkViewport viewport{};
+	VkRect2D scissor{};
+
+	if (m_activeFrameBuffer) {
+		VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(m_activeFrameBuffer);
+
+		fb.Transition(
+		    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    VK_ACCESS_SHADER_READ_BIT,
+		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		    VK_IMAGE_ASPECT_COLOR_BIT
+		);
+
+		framebuffer = fb.GetFrameBuffer();
+		extent = fb.GetExtent();
+		rp = fb.GetRenderPassObject();
+		viewport = fb.GetViewport();
+		scissor = fb.GetScissor();
+	} else {
+		m_swapchain->Transition(
+		    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		    VK_ACCESS_MEMORY_READ_BIT,
+		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		    VK_IMAGE_ASPECT_COLOR_BIT,
+		    m_currentFrame
+		);
+
+		framebuffer = m_swapchain->GetFrameBuffer(m_nextImageIndex);
+		extent = m_swapchain->GetExtent();
+		rp = m_presentRenderPass.get();
+		viewport = { 0.0f, 0.0f, (float)extent.width, (float)extent.height, 0.0f, 1.0f };
+		scissor = { { 0, 0 }, extent };
+	}
+
+	rp->Begin(
+	    m_commandBuffers[m_currentFrame],
+	    m_currentFrame,
+	    framebuffer,
+	    extent,
+	    viewport,
+	    scissor
+	);
+
+	m_currentRenderPass = rp;
+
+	debug_isInRenderPass = true;
+}
+
+void RendererVulkan::EndRenderPass() {
+	if (!m_currentRenderPass) {
+		return;
+	}
+
+	m_currentRenderPass
+	    ->Execute(m_resourceManager.GetMeshes(), m_resourceManager.GetGraphicsPrograms());
+	m_currentRenderPass->End();
+
+	debug_isInRenderPass = false;
+
+	if (m_activeFrameBuffer) {
+		VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(m_activeFrameBuffer);
+		fb.Transition(
+		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		    VK_ACCESS_SHADER_READ_BIT,
+		    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+		    VK_IMAGE_ASPECT_COLOR_BIT
+		);
+	} else {
+		m_swapchain->SetImageLayout(m_nextImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	}
+
+	m_currentRenderPass = nullptr;
+
+	m_activeFrameBuffer = FrameBufferHandle();
 }
 
 void RendererVulkan::SetRenderResolution(glm::uvec2 resolution) {
@@ -229,18 +317,6 @@ void RendererVulkan::ResizeFrameBuffer(FrameBufferHandle handle, glm::uvec2 reso
 	fb.Resize({ resolution.x, resolution.y });
 }
 
-void RendererVulkan::BindFrameBuffer(FrameBufferHandle handle) {
-	EndRenderPass();
-	m_activeFrameBuffer = handle;
-	BeginRenderPass();
-}
-
-void RendererVulkan::UnbindFrameBuffer() {
-	EndRenderPass();
-	m_activeFrameBuffer = FrameBufferHandle();
-	BeginRenderPass();
-}
-
 glm::uvec2 RendererVulkan::GetFrameBufferResolution(FrameBufferHandle handle) {
 	VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(handle);
 	VkExtent2D extent = fb.GetExtent();
@@ -293,7 +369,17 @@ void RendererVulkan::BindTexture(
 ) {
 	VulkanGraphicsProgram& material = m_resourceManager.GetGraphicsProgramEntry(materialHandle);
 	VulkanTexture& texture = m_resourceManager.GetTextureEntry(textureHandle);
-	material.BindTexture(name, textureHandle, texture, index);
+
+	texture.Transition(
+	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	    VK_ACCESS_MEMORY_READ_BIT,
+	    VK_ACCESS_SHADER_READ_BIT,
+	    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+	    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	    VK_IMAGE_ASPECT_COLOR_BIT
+	);
+
+	material.BindTexture(name, textureHandle, texture, m_currentFrame, index);
 }
 
 void RendererVulkan::BindTexture(
@@ -304,7 +390,17 @@ void RendererVulkan::BindTexture(
 ) {
 	VulkanComputeProgram& prog = m_resourceManager.GetComputeProgramEntry(computeMaterialHandle);
 	VulkanTexture& texture = m_resourceManager.GetTextureEntry(textureHandle);
-	prog.BindTexture(name, textureHandle, texture, index);
+
+	texture.Transition(
+	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	    VK_ACCESS_MEMORY_READ_BIT,
+	    VK_ACCESS_SHADER_READ_BIT,
+	    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+	    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	    VK_IMAGE_ASPECT_COLOR_BIT
+	);
+
+	prog.BindTexture(name, textureHandle, texture, m_currentFrame, index);
 }
 
 ShaderStorageBufferHandle RendererVulkan::CreateShaderStorageBuffer(
@@ -526,20 +622,17 @@ void RendererVulkan::RecreateSwapChain() {
 	vkQueueWaitIdle(m_device.m_graphicsQueue);
 	m_device.WaitIdle();
 
-	// Уничтожить старые renderFinished семафоры
 	for (VkSemaphore sem : m_renderFinishedSemaphores) {
 		m_device.DestroySemaphore(sem);
 	}
 	m_renderFinishedSemaphores.clear();
 
-	// Пересоздать swapchain
 	m_swapchain = std::make_unique<VulkanSwapchain>(
 	    m_device,
 	    VkExtent2D{ m_surfaceResolution.x, m_surfaceResolution.y },
 	    m_presentRenderPass->GetRenderPass()
 	);
 
-	// Создать новые renderFinished семафоры для нового количества изображений
 	uint32_t imageCount = static_cast<uint32_t>(m_swapchain->GetImageCount());
 	m_renderFinishedSemaphores.resize(imageCount);
 	for (uint32_t i = 0; i < imageCount; ++i) {
@@ -562,87 +655,6 @@ VulkanRenderPass* RendererVulkan::GetOrCreateRenderPass(
 	VulkanRenderPass* ptr = rp.get();
 	m_renderPassCache.emplace(key, std::move(rp));
 	return ptr;
-}
-
-void RendererVulkan::BeginRenderPass() {
-	if (m_currentRenderPass)
-		return;
-
-	VkFramebuffer framebuffer;
-	VkExtent2D extent;
-	VulkanRenderPass* rp = nullptr;
-	VkViewport viewport{};
-	VkRect2D scissor{};
-
-	if (m_activeFrameBuffer) {
-		VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(m_activeFrameBuffer);
-		framebuffer = fb.GetFrameBuffer();
-		extent = fb.GetExtent();
-		rp = fb.GetRenderPassObject();
-		viewport = fb.GetViewport();
-		scissor = fb.GetScissor();
-	} else {
-		framebuffer = m_swapchain->GetFrameBuffer(m_nextImageIndex);
-		extent = m_swapchain->GetExtent();
-		rp = m_presentRenderPass.get();
-		viewport = { 0.0f, 0.0f, (float)extent.width, (float)extent.height, 0.0f, 1.0f };
-		scissor = { { 0, 0 }, extent };
-	}
-
-	rp->Begin(
-	    m_commandBuffers[m_currentFrame],
-	    m_currentFrame,
-	    framebuffer,
-	    extent,
-	    viewport,
-	    scissor
-	);
-
-	m_currentRenderPass = rp;
-}
-
-void RendererVulkan::EndRenderPass() {
-	if (!m_currentRenderPass) {
-		return;
-	}
-	m_currentRenderPass
-	    ->Execute(m_resourceManager.GetMeshes(), m_resourceManager.GetGraphicsPrograms());
-
-	m_currentRenderPass->End();
-
-	 if (m_activeFrameBuffer) {
-		VulkanFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(m_activeFrameBuffer);
-		VkImage colorImage = fb.GetColorImage();
-		VkFormat colorFormat = fb.GetColorFormat();
-		// Переходим из COLOR_ATTACHMENT_OPTIMAL в SHADER_READ_ONLY_OPTIMAL
-		m_device.TransitionImageLayout(
-		    colorImage,
-		    colorFormat,
-		    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		    1
-		);
-	}
-
-	 VkMemoryBarrier barrier{};
-	barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-	vkCmdPipelineBarrier(
-	    m_commandBuffers[m_currentFrame],
-	    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-	    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-	    0,
-	    1,
-	    &barrier,
-	    0,
-	    nullptr,
-	    0,
-	    nullptr
-	);
-
-	m_currentRenderPass = nullptr;
 }
 
 } // namespace PixieRenderer
