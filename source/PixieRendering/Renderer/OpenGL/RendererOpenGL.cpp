@@ -45,10 +45,12 @@ void RendererOpenGL::EndFrame() {
 }
 
 void RendererOpenGL::BeginRenderPass(FrameBufferHandle handle) {
-	OpenGLFrameBuffer& frameBufferEntry = m_resourceManager.GetFrameBufferEntry(handle);
-	StoreViewportState();
-	frameBufferEntry.Bind();
-	frameBufferEntry.ResizeViewport();
+	if (handle) {
+		OpenGLFrameBuffer& frameBufferEntry = m_resourceManager.GetFrameBufferEntry(handle);
+		StoreViewportState();
+		frameBufferEntry.Bind();
+		frameBufferEntry.ResizeViewport();
+	}
 }
 
 void RendererOpenGL::EndRenderPass() {
@@ -252,35 +254,18 @@ void RendererOpenGL::LoadUniformBuffer(
     const void* /*data*/,
     size_t /*size*/
 ) {
-	//OpenGLGraphicsProgram& material = GetShaderEntry(materialHandle);
-	//if (!material.nameToBindingMap.contains(name)) {
+	// OpenGLGraphicsProgram& material = GetShaderEntry(materialHandle);
+	// if (!material.nameToBindingMap.contains(name)) {
 	//	std::cout << "LoadUniformBuffer: shader doesn't have binding '" << name << "'\n";
 	//	return;
-	//}
-	//uint32_t binding = material.nameToBindingMap[name];
-	//glBindBuffer(GL_UNIFORM_BUFFER, binding);
-	//glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
+	// }
+	// uint32_t binding = material.nameToBindingMap[name];
+	// glBindBuffer(GL_UNIFORM_BUFFER, binding);
+	// glBufferData(GL_UNIFORM_BUFFER, size, (GLvoid*)data, GL_DYNAMIC_DRAW);
 }
 
 MaterialHandle RendererOpenGL::CreateMaterial(const Material* materialInfo) {
-	if (!materialInfo) {
-		return {};
-	}
-
-	//const char* vertexSrc = materialInfo->vertexShaderSource.c_str();
-	//const char* fragmentSrc = materialInfo->fragmentShaderSource.c_str();
-	//const char* geometrySrc = materialInfo->geometryShaderSource.empty()
-	//                              ? nullptr
-	//                              : materialInfo->geometryShaderSource.c_str();
-
-	//GLuint program = CompileShaderOpenGL(vertexSrc, fragmentSrc, geometrySrc);
-	GLuint program = CompileShaderOpenGL(nullptr, nullptr, nullptr);
-	if (program == 0) {
-		return {};
-	}
-
-	MaterialHandle handle = m_resourceManager.CreateMaterial(program);
-	return handle;
+	return m_resourceManager.CreateMaterial(materialInfo);
 }
 
 ComputeProgramHandle RendererOpenGL::CreateComputeProgram(const char* source) {
@@ -338,6 +323,9 @@ void RendererOpenGL::StoreViewportState() {
 }
 
 void RendererOpenGL::RestoreViewportState() {
+	if (m_viewportStates.size() == 0) {
+		return;
+	}
 	ViewportStateOpenGL state = m_viewportStates.back();
 	m_viewportStates.pop_back();
 	glViewport(state.x, state.y, state.width, state.height);

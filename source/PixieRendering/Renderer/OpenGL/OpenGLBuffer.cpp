@@ -10,6 +10,10 @@ OpenGLBuffer::~OpenGLBuffer() {
 	glDeleteBuffers(1, &m_id);
 }
 
+GLuint OpenGLBuffer::GetID() const {
+	return m_id;
+}
+
 GLuint OpenGLBuffer::GetSize() const {
 	return m_size;
 }

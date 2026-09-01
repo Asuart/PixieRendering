@@ -123,26 +123,6 @@ VkImageAspectFlags VulkanPhysicalDeviceUtils::GetAspectMask(VkFormat format) {
 	}
 }
 
-void VulkanPhysicalDeviceUtils::PrintDeviceExtensions(VkPhysicalDevice physicalDevice) {
-	uint32_t extensionCount = 0;
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(
-	    physicalDevice,
-	    nullptr,
-	    &extensionCount,
-	    availableExtensions.data()
-	);
-
-	std::cout << "Available Device Extensions:\n";
-	for (const auto& extension : availableExtensions) {
-		std::cout << "\t" << extension.extensionName << " (Spec Version: " << extension.specVersion
-		          << ")\n";
-	}
-	std::cout << "\n";
-}
-
 void VulkanPhysicalDeviceUtils::PrintPhysicalDeviceProperties(VkPhysicalDevice physicalDevice) {
 	VkPhysicalDeviceProperties props;
 	vkGetPhysicalDeviceProperties(physicalDevice, &props);

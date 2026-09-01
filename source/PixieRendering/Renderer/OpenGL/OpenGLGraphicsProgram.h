@@ -4,12 +4,13 @@
 
 #include <glad/glad.h>
 
+#include "PixieRendering/Resources/Material.h"
+
 namespace PixieRenderer {
 
 struct OpenGLGraphicsProgram {
   public:
-	OpenGLGraphicsProgram() = default;
-	explicit OpenGLGraphicsProgram(GLuint program);
+	explicit OpenGLGraphicsProgram(const Material* materialInfo);
 	~OpenGLGraphicsProgram();
 
 	OpenGLGraphicsProgram(const OpenGLGraphicsProgram&) = delete;
@@ -17,12 +18,10 @@ struct OpenGLGraphicsProgram {
 	OpenGLGraphicsProgram(OpenGLGraphicsProgram&& other) noexcept;
 	OpenGLGraphicsProgram& operator=(OpenGLGraphicsProgram&& other) noexcept;
 
+	GLuint GetID() const;
+
 	void Bind();
 	void BindTexture(const std::string& name, GLuint index);
-
-	GLuint GetProgram() const {
-		return m_id;
-	}
 
 	void BindUniformBlock(const std::string& name, GLuint bindingPoint);
 	GLuint GetUniformBlockIndex(const std::string& name) const;

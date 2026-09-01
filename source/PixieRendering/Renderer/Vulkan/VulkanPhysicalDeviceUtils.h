@@ -25,7 +25,6 @@ class VulkanPhysicalDeviceUtils {
 	    VkSurfaceKHR surface
 	);
 	static VkImageAspectFlags GetAspectMask(VkFormat format);
-	static void PrintDeviceExtensions(VkPhysicalDevice physicalDevice);
 	static void PrintPhysicalDeviceProperties(VkPhysicalDevice physicalDevice);
 };
 

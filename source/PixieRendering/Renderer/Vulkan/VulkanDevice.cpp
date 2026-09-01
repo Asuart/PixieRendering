@@ -13,7 +13,6 @@
 namespace PixieRenderer {
 
 void VulkanDevice::Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) {
-	VulkanPhysicalDeviceUtils::PrintDeviceExtensions(physicalDevice);
 	VulkanPhysicalDeviceUtils::PrintPhysicalDeviceProperties(physicalDevice);
 
 	m_physicalDevice = physicalDevice;

@@ -1,8 +1,15 @@
 #include "OpenGLGraphicsProgram.h"
 
+#include "ShaderCompilationOpenGL.h"
+
 namespace PixieRenderer {
 
-OpenGLGraphicsProgram::OpenGLGraphicsProgram(GLuint program) : m_id(program) {
+OpenGLGraphicsProgram::OpenGLGraphicsProgram(const Material* materialInfo) {
+	m_id = CompileShaderOpenGL(
+	    materialInfo->vertexShaderSource,
+	    materialInfo->fragmentShaderSource,
+	    nullptr
+	);
 }
 
 OpenGLGraphicsProgram::~OpenGLGraphicsProgram() {
@@ -26,6 +33,10 @@ OpenGLGraphicsProgram& OpenGLGraphicsProgram::operator=(OpenGLGraphicsProgram&& 
 		other.m_id = 0;
 	}
 	return *this;
+}
+
+	GLuint OpenGLGraphicsProgram::GetID() const {
+	return m_id;
 }
 
 void OpenGLGraphicsProgram::Bind() {
