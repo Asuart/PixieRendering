@@ -61,7 +61,7 @@ class VulkanProgram {
 
 	std::unordered_map<uint32_t, std::vector<VulkanBuffer>> m_uniformBuffers;
 
-  private:
+  public:
 	void CreateDescriptorSetLayout();
 	void CreateDescriptorPool();
 	void CreatePipelineLayout();

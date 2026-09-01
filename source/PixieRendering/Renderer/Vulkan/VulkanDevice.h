@@ -124,6 +124,7 @@ class VulkanDevice {
 	static SwapChainSupportDetails
 	QuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
 	static VkImageAspectFlags GetAspectMask(VkFormat format);
+	static void PrintDeviceExtensions(VkPhysicalDevice physicalDevice);
 };
 
 } // namespace PixieRenderer

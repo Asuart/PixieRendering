@@ -118,7 +118,7 @@ void VulkanRenderPass::Begin(
 
 void VulkanRenderPass::Begin(
     VkCommandBuffer cmdBuf,
-    uint32_t frameIndex,
+    uint32_t currentFrame,
     VkFramebuffer frameBuffer,
     VkExtent2D extent
 ) {
@@ -132,19 +132,19 @@ void VulkanRenderPass::Begin(
 	VkRect2D scissor{};
 	scissor.offset = { 0, 0 };
 	scissor.extent = extent;
-	Begin(cmdBuf, frameIndex, frameBuffer, extent, viewport, scissor);
+	Begin(cmdBuf, currentFrame, frameBuffer, extent, viewport, scissor);
 }
 
 void VulkanRenderPass::Begin(
     VkCommandBuffer cmdBuf,
-    uint32_t frameIndex,
+    uint32_t currentFrame,
     VkFramebuffer frameBuffer,
     VkExtent2D extent,
     VkViewport viewport,
     VkRect2D scissor
 ) {
 	m_currentCommandBuffer = cmdBuf;
-	m_currentFrameIndex = frameIndex;
+	m_currentFrame = currentFrame;
 
 	std::array<VkClearValue, 2> clearValues{};
 	clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
@@ -199,7 +199,7 @@ void VulkanRenderPass::Execute(
 		    graphicsProgram.GetPipelineLayout(),
 		    0,
 		    1,
-		    &graphicsProgram.GetDescriptorSets()[m_currentFrameIndex],
+		    &graphicsProgram.GetDescriptorSets()[m_currentFrame],
 		    0,
 		    nullptr
 		);

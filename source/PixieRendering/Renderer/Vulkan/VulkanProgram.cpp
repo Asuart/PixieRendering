@@ -1,6 +1,8 @@
 #include "VulkanProgram.h"
 #include "VulkanConfig.h"
 #include "VulkanDevice.h"
+
+#include <iostream>
 #include <stdexcept>
 
 namespace PixieRenderer {
@@ -13,6 +15,7 @@ void VulkanProgram::Init(const BindingsInfo& bindingsInfo) {
 	for (const auto& binding : m_bindingsInfo.bindings) {
 		m_nameToBinding[binding.name] = binding.binding;
 	}
+
 	CreateDescriptorSetLayout();
 	CreateDescriptorPool();
 	AllocateDescriptorSets();
@@ -49,8 +52,8 @@ const std::vector<VkDescriptorSet>& VulkanProgram::GetDescriptorSets() const {
 	return m_descriptorSets;
 }
 
-const std::unordered_map<uint32_t, std::vector<VulkanBuffer>>&
-VulkanProgram::GetUniformBuffers() const {
+const std::unordered_map<uint32_t, std::vector<VulkanBuffer>>& VulkanProgram::GetUniformBuffers(
+) const {
 	return m_uniformBuffers;
 }
 
@@ -178,16 +181,16 @@ void VulkanProgram::AllocateDescriptorSets() {
 	VkDevice device = m_device.GetDevice();
 	m_descriptorSets.resize(cMaxFramesInFlight);
 
-	for (uint32_t i = 0; i < cMaxFramesInFlight; ++i) {
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = m_descriptorPool;
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &m_descriptorSetLayout;
+	std::vector<VkDescriptorSetLayout> layouts(cMaxFramesInFlight, m_descriptorSetLayout);
 
-		if (vkAllocateDescriptorSets(device, &allocInfo, &m_descriptorSets[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to allocate descriptor sets");
-		}
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = m_descriptorPool;
+	allocInfo.descriptorSetCount = cMaxFramesInFlight;
+	allocInfo.pSetLayouts = layouts.data();
+
+	if (vkAllocateDescriptorSets(device, &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
+		throw std::runtime_error("Failed to allocate descriptor sets");
 	}
 }
 
@@ -218,12 +221,17 @@ void VulkanProgram::UpdateDescriptorSetsForUniforms() {
 
 	for (uint32_t frame = 0; frame < cMaxFramesInFlight; ++frame) {
 		std::vector<VkWriteDescriptorSet> writes;
+		std::vector<VkDescriptorBufferInfo> bufferInfos;
+		bufferInfos.reserve(m_uniformBuffers.size());
+
 		for (const auto& [binding, buffers] : m_uniformBuffers) {
 			const VulkanBuffer& buffer = buffers[frame];
+
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = buffer.GetBuffer();
 			bufferInfo.offset = 0;
 			bufferInfo.range = buffer.GetSize();
+			bufferInfos.push_back(bufferInfo);
 
 			VkWriteDescriptorSet write{};
 			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -232,7 +240,7 @@ void VulkanProgram::UpdateDescriptorSetsForUniforms() {
 			write.dstArrayElement = 0;
 			write.descriptorCount = 1;
 			write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			write.pBufferInfo = &bufferInfo;
+			write.pBufferInfo = &bufferInfos.back();
 			writes.push_back(write);
 		}
 

@@ -75,7 +75,6 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle te
 	m_screenPlane = m_renderer->CreateMesh(&mesh);
 }
 
-
 TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, FrameBufferHandle frameBuffer)
     : UIWindow(renderer), m_targetFrameBuffer(frameBuffer) {
 	m_viewportResolution = { 1280, 720 };
@@ -98,6 +97,11 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, FrameBufferHandl
 	m_screenPlane = m_renderer->CreateMesh(&mesh);
 }
 void TextureDisplayWindow::OnBeforeDraw() {
+	if (!m_resolutionChanged) {
+		return;
+	}
+	m_resolutionChanged = false;
+
 	if (m_viewportResolution.x == 0 || m_viewportResolution.y == 0) {
 		return;
 	}
@@ -123,12 +127,13 @@ void TextureDisplayWindow::OnBeforeDraw() {
 		planeUBO.position.y = (1.0f - planeUBO.size.y) * 0.5f;
 	}
 
+	m_renderer->LoadUniformBuffer(m_shader, "PlaneUBO", &planeUBO, sizeof(PlaceUBO));
+
 	m_renderer->ResizeFrameBuffer(m_frameBuffer, m_viewportResolution);
 	m_renderer->BeginRenderPass(m_frameBuffer);
 
-	m_renderer->LoadUniformBuffer(m_shader, "PlaneUBO", &planeUBO, sizeof(PlaceUBO));
 	//// m_renderer->BindTexture(m_shader, "displayTexture", m_targetTexture, 0);
-	 m_renderer->DrawMesh(m_screenPlane, m_shader);
+	m_renderer->DrawMesh(m_screenPlane, m_shader);
 
 	m_renderer->EndRenderPass();
 }
@@ -142,7 +147,11 @@ void TextureDisplayWindow::Draw() {
 
 		ImVec2 viewportResolution = ImGui::GetContentRegionAvail();
 		ImGui::SetNextWindowSize(viewportResolution);
-		m_viewportResolution = { viewportResolution.x, viewportResolution.y };
+		if (m_viewportResolution.x != viewportResolution.x ||
+		    m_viewportResolution.y != viewportResolution.y) {
+			m_viewportResolution = { viewportResolution.x, viewportResolution.y };
+			m_resolutionChanged = true;
+		}
 
 		ImGui::Image(m_displayTexture, viewportResolution, { 0.0, 1.0 }, { 1.0, 0.0 });
 	}

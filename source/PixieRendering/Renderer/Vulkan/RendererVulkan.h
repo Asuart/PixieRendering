@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "VulkanUtils.h"
 #include "VulkanDevice.h"
 #include "VulkanInstance.h"
 #include "VulkanSwapchain.h"

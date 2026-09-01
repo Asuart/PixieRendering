@@ -1,7 +1,9 @@
 #include "VulkanInstance.h"
 
+#include <iostream>
 #include <stdexcept>
 
+#include "VulkanConfig.h"
 #include "DebugVulkan.h"
 #include "VulkanDevice.h"
 
@@ -28,16 +30,19 @@ VulkanInstance::~VulkanInstance() {
 }
 
 void VulkanInstance::Initialize(std::vector<const char*> requiredExtensions) {
+	PrintAvailableLayers();
+	PrintAvailableExtensions();
+
 	if (enableValidationLayers && !CheckValidationLayerSupport()) {
 		throw std::runtime_error("validation layers requested, but not available!");
 	}
 
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "Hello Triangle";
-	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName = "PixieEngine";
-	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.pApplicationName = cApplicationName.c_str();
+	appInfo.applicationVersion = cApplicationVersion;
+	appInfo.pEngineName = cEngineName.c_str();
+	appInfo.engineVersion = cEngineVersion;
 	appInfo.apiVersion = VK_API_VERSION_1_0;
 
 	VkInstanceCreateInfo createInfo{};
@@ -162,6 +167,35 @@ bool VulkanInstance::IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf
 
 	return indices.IsComplete() && extensionsSupported && swapChainAdequate &&
 	       supportedFeatures.samplerAnisotropy;
+}
+
+void VulkanInstance::PrintAvailableLayers() {
+	uint32_t layerCount = 0;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+	std::cout << "Available instance validation layers:\n";
+	for (const auto& layer : availableLayers) {
+		std::cout << "\t" << layer.layerName << " - " << layer.description << "\n";
+	}
+	std::cout << "\n";
+}
+
+void VulkanInstance::PrintAvailableExtensions() {
+	uint32_t extensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
+
+	std::cout << "Available instance extensions:\n";
+	for (const auto& extension : availableExtensions) {
+		std::cout << "\t" << extension.extensionName << " (Spec Version: " << extension.specVersion
+		          << ")\n";
+	}
+	std::cout << "\n";
 }
 
 } // namespace PixieRenderer

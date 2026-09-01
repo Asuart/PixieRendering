@@ -28,16 +28,16 @@ class VulkanRenderPass {
 
 	void AddRenderRequest(RenderRequest request);
 
-	void Begin(VkCommandBuffer cmdBuf, uint32_t frameIndex, VulkanFrameBuffer& frameBuffer);
+	void Begin(VkCommandBuffer cmdBuf, uint32_t currentFrame, VulkanFrameBuffer& frameBuffer);
 	void Begin(
 	    VkCommandBuffer cmdBuf,
-	    uint32_t frameIndex,
+	    uint32_t currentFrame,
 	    VkFramebuffer frameBuffer,
 	    VkExtent2D extent
 	);
 	void Begin(
 	    VkCommandBuffer cmdBuf,
-	    uint32_t frameIndex,
+	    uint32_t currentFrame,
 	    VkFramebuffer frameBuffer,
 	    VkExtent2D extent,
 		VkViewport viewport,
@@ -58,7 +58,7 @@ class VulkanRenderPass {
 	std::vector<RenderRequest> m_renderRequests = {};
 	// Pass variable
 	VkCommandBuffer m_currentCommandBuffer = VK_NULL_HANDLE;
-	uint32_t m_currentFrameIndex = 0;
+	uint32_t m_currentFrame = 0;
 };
 
 } // namespace PixieRenderer

@@ -24,6 +24,8 @@ class VulkanInstance {
 	void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 	void SetupDebugMessenger();
 	bool IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const;
+	void PrintAvailableLayers();
+	void PrintAvailableExtensions();
 };
 
 } // namespace PixieRenderer

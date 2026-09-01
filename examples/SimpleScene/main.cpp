@@ -9,10 +9,10 @@
 #include <PixieRendering/PixieRendering.h>
 #include <PixieRendering/Resources/Camera.h>
 
+#include <PixieApplication/Time/ApplicationTime.h>
 #include <PixieUIApplication/PixieUIApplication.h>
 #include <PixieUIApplication/Windows/DemoWindow.h>
 #include <PixieUIApplication/Windows/TextureDisplayWindow.h>
-#include <PixieApplication/Time/ApplicationTime.h>
 
 #include "LoadScene.h"
 
@@ -32,18 +32,18 @@ layout(location = 4) in vec4 boneWeights;
 
 layout(location = 0) out vec2 TexCoord;
 
-layout(set = 0, binding = 0) uniform CameraUBO {
+layout(set = 0, binding = 1, std140) uniform CameraUBO {
     mat4 view;
     mat4 projection;
 } camera;
 
-layout(set = 0, binding = 1) uniform ModelUBO {
+layout(set = 0, binding = 0, std140) uniform ModelUBO {
     mat4 model;
 } modelData;
 
 void main()
 {
-    gl_Position = camera.projection * camera.view * modelData.model * vec4(aPos, 1.0);
+    gl_Position = camera.projection * camera.view * modelData.model * vec4(aPos * 0.25, 1.0);
     TexCoord = aTexCoord;
 }
 )";
@@ -117,17 +117,17 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 
 		m_renderer->BeginRenderPass(m_frameBuffer);
 
+		glm::mat4 model = glm::mat4(1.0f);
+		m_angle += PixieApp::Time::deltaTime * 0.5f;
+		model = glm::rotate(model, m_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::rotate(model, m_angle * 0.7f, glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::rotate(model, m_angle * 0.3f, glm::vec3(0.0f, 0.0f, 1.0f));
+		m_renderer->LoadUniformBuffer(m_materialHandle, "ModelUBO", &model, sizeof(glm::mat4));
+
 		float aspect = static_cast<float>(m_window->GetResolution().x) /
 		               m_window->GetResolution().y;
-		m_camera.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 100.0f);
+		m_camera.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 1000.0f);
 		m_renderer->LoadUniformBuffer(m_materialHandle, "CameraUBO", &m_camera, sizeof(Camera));
-
-		glm::mat4 model = glm::mat4(1.0f);
-		//m_angle += PixieApp::Time::deltaTime * 0.5f;
-		//model = glm::rotate(model, m_angle, glm::vec3(0.0f, 1.0f, 0.0f));       
-		//model = glm::rotate(model, m_angle * 0.7f, glm::vec3(1.0f, 0.0f, 0.0f));
-		//model = glm::rotate(model, m_angle * 0.3f, glm::vec3(0.0f, 0.0f, 1.0f));
-		m_renderer->LoadUniformBuffer(m_materialHandle, "ModelUBO", &model, sizeof(glm::mat4));
 
 		m_renderer->BindTexture(m_materialHandle, "texSampler", m_texture, 0);
 

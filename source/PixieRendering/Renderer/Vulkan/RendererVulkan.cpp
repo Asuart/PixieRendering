@@ -1,5 +1,7 @@
 #include "RendererVulkan.h"
 
+#include <iostream>
+
 #include "../../Window/WindowVulkan.h"
 #include "DebugVulkan.h"
 #include "VulkanConfig.h"
@@ -499,7 +501,7 @@ void RendererVulkan::LoadUniformBuffer(
 	VulkanGraphicsProgram& material = m_resourceManager.GetGraphicsProgramEntry(handle);
 	VulkanBuffer* buffer = material.GetUniformBuffer(name, m_currentFrame);
 	if (buffer) {
-		buffer->Load(data, size);
+		buffer->LoadSubData(data, size, 0);
 	}
 }
 

@@ -1,5 +1,6 @@
 #include "VulkanDevice.h"
 
+#include <iostream>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -14,6 +15,8 @@ namespace PixieRenderer {
 const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 void VulkanDevice::Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
+	PrintDeviceExtensions(physicalDevice);
+
 	m_physicalDevice = physicalDevice;
 	m_surface = surface;
 	m_queueFamilyIndices = FindQueueFamilies(physicalDevice, surface);
@@ -485,14 +488,19 @@ VulkanDevice::FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR su
 		const auto& queueFamily = queueFamilies[i];
 
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = i;
+			indices.graphicsFamily = static_cast<uint32_t>(i);
 		}
 
 		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+		vkGetPhysicalDeviceSurfaceSupportKHR(
+		    physicalDevice,
+		    static_cast<uint32_t>(i),
+		    surface,
+		    &presentSupport
+		);
 
 		if (presentSupport) {
-			indices.presentFamily = i;
+			indices.presentFamily = static_cast<uint32_t>(i);
 		}
 
 		if (indices.IsComplete()) {
@@ -570,6 +578,26 @@ VkImageAspectFlags VulkanDevice::GetAspectMask(VkFormat format) {
 	default:
 		return VK_IMAGE_ASPECT_COLOR_BIT;
 	}
+}
+
+void VulkanDevice::PrintDeviceExtensions(VkPhysicalDevice physicalDevice) {
+	uint32_t extensionCount = 0;
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(
+	    physicalDevice,
+	    nullptr,
+	    &extensionCount,
+	    availableExtensions.data()
+	);
+
+	std::cout << "Available Device Extensions:\n";
+	for (const auto& extension : availableExtensions) {
+		std::cout << "\t" << extension.extensionName << " (Spec Version: " << extension.specVersion
+		          << ")\n";
+	}
+	std::cout << "\n";
 }
 
 } // namespace PixieRenderer
