@@ -1,21 +1,20 @@
 #include "UI.h"
 
-#include <vulkan/vulkan.hpp>
-#include <imgui.h>
-#include <backends/imgui_impl_sdl2.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_sdl2.h>
 #include <backends/imgui_impl_vulkan.h>
+#include <imgui.h>
+#include <vulkan/vulkan.hpp>
 
-#include <PixieRendering/Window/Window.h>
 #include <PixieApplication/Log/Log.h>
+#include <PixieRendering/Window/Window.h>
 
 #include "UIWindow.h"
 
 namespace PixieUI {
 
 UI::UI(PixieRenderer::Window* mainWindow, bool docking)
-    :
-	m_window(mainWindow), m_isDocking(docking) {
+    : m_window(mainWindow), m_isDocking(docking) {
 	IMGUI_CHECKVERSION();
 }
 

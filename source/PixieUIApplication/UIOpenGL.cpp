@@ -1,21 +1,21 @@
 #include "UIOpenGL.h"
 
-#include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <imgui.h>
 
+#include <PixieApplication/Log/Log.h>
 #include <PixieRendering/Window/Window.h>
 #include <PixieRendering/Window/WindowOpenGL.h>
-#include <PixieApplication/Log/Log.h>
 
+#include "UIImageOpenGL.h"
 #include "UIWindow.h"
 
 using namespace PixieRenderer;
 
 namespace PixieUI {
 
-UIOpenGL::UIOpenGL(WindowOpenGL* mainWindow, bool docking) :
-	UI(mainWindow, docking) {
+UIOpenGL::UIOpenGL(WindowOpenGL* mainWindow, bool docking) : UI(mainWindow, docking) {
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -50,7 +50,8 @@ void UIOpenGL::Draw() {
 	ImGui::SetNextWindowViewport(viewport->ID);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+	               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 	if (dockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode) {
@@ -78,10 +79,21 @@ void UIOpenGL::Draw() {
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
-		// SDL_GL_MakeCurrent(m_window->GetSDLWindow(), reinterpret_cast<MainWindowOpenGL*>(m_window)->GetOpenGLContext());
 	}
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+UIImage* UIOpenGL::CreateUIImage(IRenderer* renderer, FrameBufferHandle handle) {
+	UIImageOpenGL* image = new UIImageOpenGL(renderer);
+	image->SetFrameBuffer(handle);
+	return image;
+}
+
+UIImage* UIOpenGL::CreateUIImage(IRenderer* renderer, TextureHandle handle) {
+	UIImageOpenGL* image = new UIImageOpenGL(renderer);
+	image->SetTexture(handle);
+	return image;
 }
 
 } // namespace PixieUI

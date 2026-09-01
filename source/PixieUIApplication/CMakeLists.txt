@@ -13,6 +13,8 @@ target_include_directories(PixieUIApplication PUBLIC "${CMAKE_CURRENT_SOURCE_DIR
 target_link_libraries(PixieUIApplication PUBLIC PixieApplication)
 target_link_libraries(PixieUIApplication PUBLIC imgui)
 
+target_link_libraries(PixieUIApplication PRIVATE glad)
+
 if (MSVC)
     target_compile_options(PixieUIApplication PRIVATE /W4 /WX)
 else()

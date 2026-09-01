@@ -12,6 +12,7 @@ struct OpenGLTexture {
 	OpenGLTexture(const Image2D* image);
 	~OpenGLTexture();
 
+	GLuint GetID() const;
 	glm::uvec2 GetResolution() const;
 
 	void Load(const Image2D* image);

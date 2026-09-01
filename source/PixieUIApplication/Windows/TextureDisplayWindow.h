@@ -1,22 +1,24 @@
 #pragma once
 #include "PixieUIApplication/UIWindow.h"
-
 #include <PixieRendering/Renderer/IRenderer.h>
 #include <PixieRendering/Resources/ResourceHandles.h>
-
-#include <vulkan/vulkan.h>
-
-class WindowUI;
+#include <PixieUIApplication/UIImage.h>
 
 namespace PixieUI {
 
 class TextureDisplayWindow : public UIWindow {
   public:
-	TextureDisplayWindow(PixieRenderer::IRenderer* renderer, PixieRenderer::TextureHandle texture);
 	TextureDisplayWindow(
+	    UI* ui,
+	    PixieRenderer::IRenderer* renderer,
+	    PixieRenderer::TextureHandle texture
+	);
+	TextureDisplayWindow(
+	    UI* ui,
 	    PixieRenderer::IRenderer* renderer,
 	    PixieRenderer::FrameBufferHandle frameBuffer
 	);
+	virtual ~TextureDisplayWindow();
 
 	virtual void OnBeforeDraw() override;
 	void Draw() override;
@@ -31,7 +33,7 @@ class TextureDisplayWindow : public UIWindow {
 	PixieRenderer::MaterialHandle m_shader;
 	PixieRenderer::MeshHandle m_screenPlane;
 	glm::uvec2 m_viewportResolution;
-	VkDescriptorSet m_displayTexture = nullptr;
+	UIImage* m_image = nullptr;
 	bool m_resolutionChanged = true;
 
 	float Aspect(glm::ivec2 resolution);

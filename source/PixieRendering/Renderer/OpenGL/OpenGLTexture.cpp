@@ -21,6 +21,10 @@ OpenGLTexture::~OpenGLTexture() {
 	glDeleteTextures(1, &m_id);
 }
 
+GLuint OpenGLTexture::GetID() const {
+	return m_id;
+}
+
 glm::uvec2 OpenGLTexture::GetResolution() const {
 	return m_resolution;
 }

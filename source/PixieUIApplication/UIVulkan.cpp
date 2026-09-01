@@ -11,6 +11,7 @@
 
 #include <PixieApplication/Log/Log.h>
 
+#include "UIImageVulkan.h"
 #include "UIWindow.h"
 
 using namespace PixieRenderer;
@@ -133,6 +134,18 @@ void UIVulkan::Draw() {
 
 	RendererVulkan* renderer = reinterpret_cast<WindowVulkan*>(m_window)->GetRendererVulkan();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), renderer->GetCurrentFrameCommandBuffer());
+}
+
+UIImage* UIVulkan::CreateUIImage(IRenderer* renderer, FrameBufferHandle handle) {
+	UIImageVulkan* image = new UIImageVulkan(renderer);
+	image->SetFrameBuffer(handle);
+	return image;
+}
+
+UIImage* UIVulkan::CreateUIImage(IRenderer* renderer, TextureHandle handle) {
+	UIImageVulkan* image = new UIImageVulkan(renderer);
+	image->SetTexture(handle);
+	return image;
 }
 
 } // namespace PixieUI

@@ -74,7 +74,7 @@ GLuint OpenGLFrameBuffer::GetBufferHandle() const {
 	return m_frameBuffer;
 }
 
-GLuint OpenGLFrameBuffer::GetColorHandle() const {
+GLuint OpenGLFrameBuffer::GetColorAttachmentID() const {
 	return m_texture;
 }
 

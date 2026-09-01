@@ -6,11 +6,11 @@ using namespace PixieRenderer;
 
 namespace PixieUI {
 
-DemoWindow::DemoWindow(IRenderer* renderer) :
-	UIWindow(renderer) {}
+DemoWindow::DemoWindow(UI* ui, IRenderer* renderer) : UIWindow(ui, renderer) {
+}
 
 void DemoWindow::Draw() {
 	ImGui::ShowDemoWindow();
 }
 
-}
+} // namespace PixieUI

@@ -316,30 +316,15 @@ void RendererOpenGL::MemoryBarriersAll() {
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-// TextureHandle RendererOpenGL::GetColorAttachmentHandle(FrameBufferHandle handle) {
-//	OpenGLFrameBuffer& fb = GetFrameBufferEntry(handle);
-//	return TextureHandle(fb.GetColorHandle());
-// }
-//
-// TextureHandle RendererOpenGL::GetDepthAttachmentHandle(FrameBufferHandle handle) {
-//	OpenGLFrameBuffer& fb = GetFrameBufferEntry(handle);
-//	return TextureHandle(fb.GetDepthHandle());
-// }
-//
-// uint64_t RendererOpenGL::GetInternalID(TextureHandle handle) {
-//	OpenGLTexture& textureEntry = GetTextureEntry(handle);
-//	return textureEntry.id;
-// }
-//
-// uint64_t RendererOpenGL::GetInternalColorAttachmentID(FrameBufferHandle handle) {
-//	OpenGLFrameBuffer& frameBufferEntry = GetFrameBufferEntry(handle);
-//	return frameBufferEntry.GetColorHandle();
-// }
-//
-// uint64_t RendererOpenGL::GetInternalDepthAttachmentID(FrameBufferHandle handle) {
-//	OpenGLFrameBuffer& frameBufferEntry = GetFrameBufferEntry(handle);
-//	return frameBufferEntry.GetDepthHandle();
-// }
+GLuint RendererOpenGL::GetInternalTextureID(TextureHandle handle) {
+	OpenGLTexture& textureEntry = m_resourceManager.GetTextureEntry(handle);
+	return textureEntry.GetID();
+}
+
+GLuint RendererOpenGL::GetInternalFrameBufferColorAttachmentID(FrameBufferHandle handle) {
+	OpenGLFrameBuffer& fb = m_resourceManager.GetFrameBufferEntry(handle);
+	return fb.GetColorAttachmentID();
+}
 
 void RendererOpenGL::StoreViewportState() {
 	GLint originalViewport[4];

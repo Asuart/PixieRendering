@@ -68,8 +68,8 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 	    : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
 		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
-		m_ui->AddWindow(new PixieUI::DemoWindow(m_renderer));
-		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(m_renderer, m_frameBuffer));
+		m_ui->AddWindow(new PixieUI::DemoWindow(m_ui, m_renderer));
+		m_ui->AddWindow(new PixieUI::TextureDisplayWindow(m_ui, m_renderer, m_frameBuffer));
 
 		std::filesystem::path appPath = std::filesystem::path(path);
 		const std::string filePath = appPath.parent_path().string() + "/cube/cube.obj";
@@ -147,6 +147,7 @@ class SimplaeSceneApp : public PixieApp::PixieUIApplication {
 
 int32_t main(int argc, char** argv) {
 	SimplaeSceneApp* app = new SimplaeSceneApp(argv[0]);
+
 	app->Start();
 
 	delete app;

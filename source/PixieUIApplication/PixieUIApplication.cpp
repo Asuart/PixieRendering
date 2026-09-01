@@ -7,8 +7,13 @@ using namespace PixieRenderer;
 
 namespace PixieApp {
 
-PixieUIApplication::PixieUIApplication(const std::string& name, glm::ivec2 resolution, RenderAPI renderAPI, bool docking) :
-	PixieApplication(name, resolution, renderAPI) {
+PixieUIApplication::PixieUIApplication(
+    const std::string& name,
+    glm::ivec2 resolution,
+    RenderAPI renderAPI,
+    bool docking
+)
+    : PixieApplication(name, resolution, renderAPI) {
 	switch (m_renderAPI) {
 	case RenderAPI::OpenGL: {
 		WindowOpenGL* mainWindowOpenGL = reinterpret_cast<WindowOpenGL*>(m_window);
@@ -38,4 +43,4 @@ void PixieUIApplication::HandleEvent(const WindowEvent& event) {
 	HandleEventAfterUI(event);
 }
 
-}
+} // namespace PixieApp

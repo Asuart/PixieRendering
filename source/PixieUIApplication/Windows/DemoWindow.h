@@ -4,10 +4,10 @@
 namespace PixieUI {
 
 class DemoWindow : public UIWindow {
-public:
-	DemoWindow(PixieRenderer::IRenderer* renderer);
+  public:
+	DemoWindow(UI* ui, PixieRenderer::IRenderer* renderer);
 
 	void Draw() override;
 };
 
-}
+} // namespace PixieUI

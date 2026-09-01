@@ -6,9 +6,15 @@
 namespace PixieApp {
 
 class PixieUIApplication : public PixieApplication {
-public:
-	PixieUIApplication(const std::string& name, glm::ivec2 resolution, PixieRenderer::RenderAPI renderAPI, bool docking);
-	virtual ~PixieUIApplication() {}
+  public:
+	PixieUIApplication(
+	    const std::string& name,
+	    glm::ivec2 resolution,
+	    PixieRenderer::RenderAPI renderAPI,
+	    bool docking
+	);
+	virtual ~PixieUIApplication() {
+	}
 
 	virtual void BeforeDrawFrame() override;
 	void OnDrawFrame() final;
@@ -17,8 +23,8 @@ public:
 	virtual void OnBeforeDrawUI() {};
 	virtual void HandleEventAfterUI(const PixieRenderer::WindowEvent&) {};
 
-protected:
+  protected:
 	PixieUI::UI* m_ui;
 };
 
-} // namespaec PixieAplication
+} // namespace PixieApp

@@ -92,6 +92,9 @@ class RendererOpenGL : public IRenderer {
 	void WaitIdle() override;
 	void MemoryBarriersAll() override;
 
+	GLuint GetInternalTextureID(TextureHandle handle);
+	GLuint GetInternalFrameBufferColorAttachmentID(FrameBufferHandle handle);
+
   private:
 	ResourceManagerOpenGL m_resourceManager = {};
 	std::vector<ViewportStateOpenGL> m_viewportStates;

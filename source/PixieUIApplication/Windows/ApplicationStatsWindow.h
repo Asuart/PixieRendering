@@ -4,10 +4,10 @@
 namespace PixieUI {
 
 class ApplicationStatsWindow : public UIWindow {
-public:
-	ApplicationStatsWindow(PixieRenderer::IRenderer* renderer);
+  public:
+	ApplicationStatsWindow(UI* ui, PixieRenderer::IRenderer* renderer);
 
 	void Draw() override;
 };
 
-}
+} // namespace PixieUI

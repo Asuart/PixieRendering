@@ -13,6 +13,12 @@ class UIVulkan : public UI {
 	~UIVulkan();
 
 	void Draw();
+	UIImage* CreateUIImage(
+	    PixieRenderer::IRenderer* renderer,
+	    PixieRenderer::FrameBufferHandle handle
+	) override;
+	UIImage* CreateUIImage(PixieRenderer::IRenderer* renderer, PixieRenderer::TextureHandle handle)
+	    override;
 };
 
 } // namespace PixieUI

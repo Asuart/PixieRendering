@@ -1,6 +1,10 @@
 #pragma once
 #include <vector>
 
+#include <PixieRendering/Renderer/IRenderer.h>
+
+#include "UIImage.h"
+
 namespace PixieRenderer {
 class Window;
 struct WindowEvent;
@@ -20,6 +24,14 @@ class UI {
 
 	void OnBeforeDrawFrame();
 	virtual void Draw() = 0;
+	virtual UIImage* CreateUIImage(
+	    PixieRenderer::IRenderer* renderer,
+	    PixieRenderer::FrameBufferHandle handle
+	) = 0;
+	virtual UIImage* CreateUIImage(
+	    PixieRenderer::IRenderer* renderer,
+	    PixieRenderer::TextureHandle handle
+	) = 0;
 
   protected:
 	PixieRenderer::Window* m_window;

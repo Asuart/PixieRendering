@@ -4,17 +4,22 @@
 
 namespace PixieUI {
 
-class UIWindow {
-public:
-	UIWindow(PixieRenderer::IRenderer* renderer) : m_renderer(renderer) {};
-	virtual ~UIWindow() {}
+class UI;
 
-	virtual void OnBeforeDraw() {}
+class UIWindow {
+  public:
+	UIWindow(UI* ui, PixieRenderer::IRenderer* renderer) : m_ui(ui), m_renderer(renderer) {};
+	virtual ~UIWindow() {
+	}
+
+	virtual void OnBeforeDraw() {
+	}
 	virtual void Draw() = 0;
 	virtual void HandleEvent(const PixieRenderer::WindowEvent&) {};
 
-protected:
+  protected:
+	UI* m_ui;
 	PixieRenderer::IRenderer* m_renderer;
 };
 
-} // namespace PixieRenderer
+} // namespace PixieUI

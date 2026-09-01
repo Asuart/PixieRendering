@@ -11,7 +11,7 @@ struct OpenGLFrameBuffer {
 	void Resize(glm::ivec2 resolution);
 	glm::ivec2 GetResolution() const;
 	GLuint GetBufferHandle() const;
-	GLuint GetColorHandle() const;
+	GLuint GetColorAttachmentID() const;
 	GLuint GetDepthHandle() const;
 	void ResizeViewport() const;
 	void Clear() const;

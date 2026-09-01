@@ -1,11 +1,13 @@
 #include "TextureDisplayWindow.h"
 
-#include <imgui.h>
 #include <string>
+
+#include "../../dependencies/imgui/backends/imgui_impl_vulkan.h"
+#include <imgui.h>
 
 #include <PixieRendering/Renderer/Vulkan/RendererVulkan.h>
 
-#include "../../dependencies/imgui/backends/imgui_impl_vulkan.h"
+#include "PixieUIApplication/UI.h"
 
 using namespace PixieRenderer;
 
@@ -53,8 +55,8 @@ void main() {
 }
 )";
 
-TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle texture)
-    : UIWindow(renderer), m_targetTexture(texture) {
+TextureDisplayWindow::TextureDisplayWindow(UI* ui, IRenderer* renderer, TextureHandle texture)
+    : UIWindow(ui, renderer), m_targetTexture(texture) {
 	m_viewportResolution = { 1280, 720 };
 	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution, TextureFormat::RGBA32f);
 
@@ -75,8 +77,12 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, TextureHandle te
 	m_screenPlane = m_renderer->CreateMesh(&mesh);
 }
 
-TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, FrameBufferHandle frameBuffer)
-    : UIWindow(renderer), m_targetFrameBuffer(frameBuffer) {
+TextureDisplayWindow::TextureDisplayWindow(
+    UI* ui,
+    IRenderer* renderer,
+    FrameBufferHandle frameBuffer
+)
+    : UIWindow(ui, renderer), m_targetFrameBuffer(frameBuffer) {
 	m_viewportResolution = { 1280, 720 };
 	m_frameBuffer = m_renderer->CreateFrameBuffer(m_viewportResolution, TextureFormat::RGBA32f);
 
@@ -96,6 +102,13 @@ TextureDisplayWindow::TextureDisplayWindow(IRenderer* renderer, FrameBufferHandl
 
 	m_screenPlane = m_renderer->CreateMesh(&mesh);
 }
+
+TextureDisplayWindow::~TextureDisplayWindow() {
+	if (m_image) {
+		delete m_image;
+	}
+}
+
 void TextureDisplayWindow::OnBeforeDraw() {
 	if (!m_resolutionChanged) {
 		return;
@@ -153,7 +166,8 @@ void TextureDisplayWindow::Draw() {
 			m_resolutionChanged = true;
 		}
 
-		ImGui::Image(m_displayTexture, viewportResolution, { 0.0, 1.0 }, { 1.0, 0.0 });
+		ImTextureID texID = m_image ? m_image->GetTextureID() : 0;
+		ImGui::Image(texID, viewportResolution, { 0.0, 1.0 }, { 1.0, 0.0 });
 	}
 	ImGui::End();
 	ImGui::PopStyleColor();
@@ -161,27 +175,17 @@ void TextureDisplayWindow::Draw() {
 }
 
 void TextureDisplayWindow::SetTexture(TextureHandle texture) {
-	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
-	if (m_displayTexture) {
-		ImGui_ImplVulkan_RemoveTexture(m_displayTexture);
+	if (m_image) {
+		delete m_image;
 	}
-	m_displayTexture = ImGui_ImplVulkan_AddTexture(
-	    renderer->GetTextureSampler(texture),
-	    renderer->GetTextureImageView(texture),
-	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	);
+	m_image = m_ui->CreateUIImage(m_renderer, texture);
 }
 
 void TextureDisplayWindow::SetFrameBuffer(FrameBufferHandle frameBuffer) {
-	RendererVulkan* renderer = reinterpret_cast<RendererVulkan*>(m_renderer);
-	if (m_displayTexture) {
-		ImGui_ImplVulkan_RemoveTexture(m_displayTexture);
+	if (m_image) {
+		delete m_image;
 	}
-	m_displayTexture = ImGui_ImplVulkan_AddTexture(
-	    renderer->GetFrameBufferSampler(frameBuffer),
-	    renderer->GetFrameBufferColorImageView(frameBuffer),
-	    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-	);
+	m_image = m_ui->CreateUIImage(m_renderer, frameBuffer);
 }
 
 float TextureDisplayWindow::Aspect(glm::ivec2 resolution) {
