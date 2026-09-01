@@ -3,9 +3,10 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "VulkanConfig.h"
 #include "DebugVulkan.h"
+#include "VulkanConfig.h"
 #include "VulkanDevice.h"
+#include "VulkanPhysicalDeviceUtils.h"
 
 namespace PixieRenderer {
 
@@ -16,6 +17,7 @@ const bool enableValidationLayers = true;
 #endif
 
 const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 VulkanInstance::VulkanInstance() {
 }
@@ -72,6 +74,10 @@ void VulkanInstance::Initialize(std::vector<const char*> requiredExtensions) {
 	}
 
 	SetupDebugMessenger();
+}
+
+const std::vector<const char*>& VulkanInstance::GetDeviceExtensions() const {
+	return deviceExtensions;
 }
 
 VkPhysicalDevice VulkanInstance::PickPhysicalDevice(VkSurfaceKHR surface) const {
@@ -150,14 +156,15 @@ void VulkanInstance::SetupDebugMessenger() {
 }
 
 bool VulkanInstance::IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const {
-	QueueFamilyIndices indices = VulkanDevice::FindQueueFamilies(device, surface);
+	QueueFamilyIndices indices = VulkanPhysicalDeviceUtils::FindQueueFamilies(device, surface);
 
-	bool extensionsSupported = VulkanDevice::CheckExtensionSupport(device);
+	bool extensionsSupported = VulkanPhysicalDeviceUtils::
+	    CheckExtensionSupport(device, deviceExtensions);
 
 	bool swapChainAdequate = false;
 	if (extensionsSupported) {
 		SwapChainSupportDetails
-		    swapChainSupport = VulkanDevice::QuerySwapChainSupport(device, surface);
+		    swapChainSupport = VulkanPhysicalDeviceUtils::QuerySwapChainSupport(device, surface);
 		swapChainAdequate = !swapChainSupport.formats.empty() &&
 		                    !swapChainSupport.presentModes.empty();
 	}

@@ -5,22 +5,21 @@
 #include <stdexcept>
 #include <vector>
 
-#include "VulkanBuffer.h"
-#include "VulkanSwapchain.h"
-
 #include "DebugVulkan.h"
+#include "VulkanBuffer.h"
+#include "VulkanPhysicalDeviceUtils.h"
+#include "VulkanSwapchain.h"
 
 namespace PixieRenderer {
 
-const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
-void VulkanDevice::Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
-	PrintDeviceExtensions(physicalDevice);
+void VulkanDevice::Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) {
+	VulkanPhysicalDeviceUtils::PrintDeviceExtensions(physicalDevice);
+	VulkanPhysicalDeviceUtils::PrintPhysicalDeviceProperties(physicalDevice);
 
 	m_physicalDevice = physicalDevice;
 	m_surface = surface;
-	m_queueFamilyIndices = FindQueueFamilies(physicalDevice, surface);
-	CreateLogicalDevice();
+	m_queueFamilyIndices = VulkanPhysicalDeviceUtils::FindQueueFamilies(physicalDevice, surface);
+	CreateLogicalDevice(deviceExtensions);
 	CreateCommandPool(m_commandPool);
 }
 
@@ -320,7 +319,7 @@ void VulkanDevice::TransitionImageLayout(
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.image = image;
-	barrier.subresourceRange.aspectMask = GetAspectMask(format);
+	barrier.subresourceRange.aspectMask = VulkanPhysicalDeviceUtils::GetAspectMask(format);
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = mipLevels;
 	barrier.subresourceRange.baseArrayLayer = 0;
@@ -393,7 +392,7 @@ QueueFamilyIndices VulkanDevice::GetQueueFamilyIndices() const {
 }
 
 SwapChainSupportDetails VulkanDevice::QuerySwapChainSupport() const {
-	return QuerySwapChainSupport(m_physicalDevice, m_surface);
+	return VulkanPhysicalDeviceUtils::QuerySwapChainSupport(m_physicalDevice, m_surface);
 }
 
 uint32_t VulkanDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -435,7 +434,7 @@ VkFormat VulkanDevice::FindSupportedFormat(
 	throw std::runtime_error("failed to find supported format!");
 }
 
-void VulkanDevice::CreateLogicalDevice() {
+void VulkanDevice::CreateLogicalDevice(const std::vector<const char*>& deviceExtensions) {
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies = { m_queueFamilyIndices.graphicsFamily,
 		                                       m_queueFamilyIndices.presentFamily };
@@ -468,136 +467,6 @@ void VulkanDevice::CreateLogicalDevice() {
 
 	vkGetDeviceQueue(m_device, m_queueFamilyIndices.graphicsFamily, 0, &m_graphicsQueue);
 	vkGetDeviceQueue(m_device, m_queueFamilyIndices.presentFamily, 0, &m_presentQueue);
-}
-
-QueueFamilyIndices
-VulkanDevice::FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
-	QueueFamilyIndices indices;
-
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(
-	    physicalDevice,
-	    &queueFamilyCount,
-	    queueFamilies.data()
-	);
-
-	for (size_t i = 0; i < queueFamilies.size(); i++) {
-		const auto& queueFamily = queueFamilies[i];
-
-		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = static_cast<uint32_t>(i);
-		}
-
-		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(
-		    physicalDevice,
-		    static_cast<uint32_t>(i),
-		    surface,
-		    &presentSupport
-		);
-
-		if (presentSupport) {
-			indices.presentFamily = static_cast<uint32_t>(i);
-		}
-
-		if (indices.IsComplete()) {
-			break;
-		}
-	}
-
-	return indices;
-}
-
-bool VulkanDevice::CheckExtensionSupport(VkPhysicalDevice physicalDevice) {
-	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(
-	    physicalDevice,
-	    nullptr,
-	    &extensionCount,
-	    availableExtensions.data()
-	);
-
-	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-	for (const auto& extension : availableExtensions) {
-		requiredExtensions.erase(extension.extensionName);
-	}
-
-	return requiredExtensions.empty();
-}
-
-SwapChainSupportDetails
-VulkanDevice::QuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
-	SwapChainSupportDetails details;
-
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
-
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-
-	if (formatCount != 0) {
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(
-		    physicalDevice,
-		    surface,
-		    &formatCount,
-		    details.formats.data()
-		);
-	}
-
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
-
-	if (presentModeCount != 0) {
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(
-		    physicalDevice,
-		    surface,
-		    &presentModeCount,
-		    details.presentModes.data()
-		);
-	}
-
-	return details;
-}
-
-VkImageAspectFlags VulkanDevice::GetAspectMask(VkFormat format) {
-	switch (format) {
-	case VK_FORMAT_D16_UNORM:
-	case VK_FORMAT_D32_SFLOAT:
-		return VK_IMAGE_ASPECT_DEPTH_BIT;
-	case VK_FORMAT_D24_UNORM_S8_UINT:
-	case VK_FORMAT_D32_SFLOAT_S8_UINT:
-		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-	default:
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-}
-
-void VulkanDevice::PrintDeviceExtensions(VkPhysicalDevice physicalDevice) {
-	uint32_t extensionCount = 0;
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(
-	    physicalDevice,
-	    nullptr,
-	    &extensionCount,
-	    availableExtensions.data()
-	);
-
-	std::cout << "Available Device Extensions:\n";
-	for (const auto& extension : availableExtensions) {
-		std::cout << "\t" << extension.extensionName << " (Spec Version: " << extension.specVersion
-		          << ")\n";
-	}
-	std::cout << "\n";
 }
 
 } // namespace PixieRenderer

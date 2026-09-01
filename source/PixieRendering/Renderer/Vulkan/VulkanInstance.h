@@ -12,6 +12,7 @@ class VulkanInstance {
 
 	void Initialize(std::vector<const char*> requiredExtensions);
 
+	const std::vector<const char*>& GetDeviceExtensions() const;
 	VkPhysicalDevice PickPhysicalDevice(VkSurfaceKHR surface) const;
 
 	VkInstance GetInstance() const;

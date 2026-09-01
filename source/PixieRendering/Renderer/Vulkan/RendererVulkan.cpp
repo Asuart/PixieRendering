@@ -29,7 +29,8 @@ void RendererVulkan::InitVulkan() {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 
-	m_device.Initialize(physicalDevice, m_surface);
+	const std::vector<const char*>& deviceExtensions = m_instance.GetDeviceExtensions();
+	m_device.Initialize(physicalDevice, m_surface, deviceExtensions);
 
 	m_presentRenderPass = std::make_unique<
 	    VulkanRenderPass>(m_device, m_device.GetSurfaceFormat(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);

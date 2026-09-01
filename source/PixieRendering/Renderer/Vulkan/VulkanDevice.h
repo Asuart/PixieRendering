@@ -22,7 +22,11 @@ class VulkanDevice {
 	QueueFamilyIndices m_queueFamilyIndices = {};
 	VkCommandPool m_commandPool = VK_NULL_HANDLE;
 
-	void Initialize(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
+	void Initialize(
+	    VkPhysicalDevice physicalDevice,
+	    VkSurfaceKHR surface,
+	    const std::vector<const char*>& deviceExtensions
+	);
 	void Cleanup();
 
 	VkPhysicalDevice GetPhysicalDevice() const;
@@ -115,16 +119,7 @@ class VulkanDevice {
 	);
 
   private:
-	void CreateLogicalDevice();
-
-  public:
-	static QueueFamilyIndices
-	FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-	static bool CheckExtensionSupport(VkPhysicalDevice physicalDevice);
-	static SwapChainSupportDetails
-	QuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-	static VkImageAspectFlags GetAspectMask(VkFormat format);
-	static void PrintDeviceExtensions(VkPhysicalDevice physicalDevice);
+	void CreateLogicalDevice(const std::vector<const char*>& deviceExtensions);
 };
 
 } // namespace PixieRenderer
