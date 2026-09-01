@@ -65,7 +65,7 @@ void main()
 class SimplaeSceneApp : public PixieApp::PixieUIApplication {
   public:
 	SimplaeSceneApp(const char* path)
-	    : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::OpenGL, true) {
+	    : PixieUIApplication("Simple scene", { 1280, 720 }, RenderAPI::Vulkan, true) {
 		m_frameBuffer = m_renderer->CreateFrameBuffer({ 1280, 720 }, TextureFormat::RGBA32f);
 
 		m_ui->AddWindow(new PixieUI::DemoWindow(m_ui, m_renderer));
